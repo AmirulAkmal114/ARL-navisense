@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NaviSense</title>
+<link rel="icon" href="AltairLogo2.jpg" type="image/x-icon">
+<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+<script src="config.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+    <h2 class="logo">NaviSense by Altair Research Lab</h2>
+    <nav class="navigation">
+        <a href="index.html">Home</a>
+        <a href="#">About</a>
+        <a href="#">Service</a>
+        <a href="#">Contact</a>
+    </nav>
+</header>
+
+<div class="wrapper2">
+    <div class="form-box login">
+        <form id="demoForm">
+            <h1><b>Demo Request</b></h1>
+            
+            <div class="input-box">
+                <input type="text" id="firstname" placeholder="First Name" required>
+                <i class='bx bxs-user'></i>
+            </div>
+
+            <div class="input-box">
+                <input type="text" id="lastname" placeholder="Last Name" required>
+                <i class='bx bxs-user'></i>
+            </div>
+
+            <div class="input-box">
+                <input type="text" id="organization" placeholder="Organization" required>
+                <i class='bx bx-briefcase'></i>
+            </div>
+
+            <div class="input-box">
+                <input type="email" id="email" placeholder="Email" required>
+                <i class='bx bx-envelope'></i>
+            </div>
+
+            <div class="input-box">
+                <input type="password" id="password" placeholder="Password" required>
+                <i class='bx bx-lock-alt'></i>
+            </div>
+
+            <button type="submit" class="btn-login">Demo Request</button>
+
+            <div class="register-link">
+                <p>Already have an account? <a href="index.html">Login</a></p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('demoForm').addEventListener('submit', async function(e) {
+    e.preventDefault(); // Prevent form default submit
+
+    const data = {
+        first_name: document.getElementById('firstname').value,
+        last_name: document.getElementById('lastname').value,
+        organization: document.getElementById('organization').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+    };
+
+    try {
+        const response = await fetch(API_BASE + '/demo-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert('Demo request submitted successfully!');
+            // Optionally redirect or reset form
+            document.getElementById('demoForm').reset();
+        } else {
+            alert('Failed to submit demo request. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error submitting demo request:', error);
+        alert('Error submitting demo request.');
+    }
+});
+</script>
+
+</body>
+</html>

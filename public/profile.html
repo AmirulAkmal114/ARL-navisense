@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ARL AIS Dashboard</title>
+    <link rel="icon" href="AltairLogo2.jpg"type="image/x-icon">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Include Folium CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Include Folium JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.12.0/leaflet-providers.js"></script>
+    <!-- Include Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0; /* Remove default margin to make the top-bar full width */
+            background-color: white;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .page-item {
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .page-item.disabled {
+            pointer-events: none;
+            color: grey;
+        }
+        
+        #top-box {
+            height: 10px;
+            width:auto;
+            display: flex;            /* Enable flexbox */
+            justify-content: space-between;  /* Distribute items to left and right */
+            align-items: center;      /* Vertically center the elements */
+            background-color: #000;   /* Adjust to your background color */
+            padding: 10px;            /* Add some padding */
+        }
+
+        /* Angkasa-X Logo at the left of top bar*/
+        #top-logo {
+            max-height: 90%; /* Adjust max-height to fit the top bar's height */
+            object-fit: contain;
+            margin: 10px 0;
+            padding: 10px;
+        }
+        
+        /* Container for the button MAP, VESSELS, PORTS, MORE*/
+        .top-button-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button {
+            color: white;
+            background-color: #000035;
+            border: none;
+            padding: 10px 10px;
+            cursor: pointer;
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            margin: 0 10px; /* Adjust margin as needed */
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+        
+        /* When the above button is active (Clicked)*/
+        .top-button.active {
+            background-color: #000070; /* Active color */
+        }
+        
+        /* COntainer for search form*/
+        #search-form {
+            display: flex;
+            align-items: center;
+            width: 40%;
+            float: right;
+            
+        }
+        
+        /* COntainer for search-box and clear button*/
+        #search-input-form {
+            display: flex;
+            justify-content: space-between; /* Adjust as needed */
+            width: 100%;
+        }
+        
+        #search-box{
+            background-color: white;
+            width:100%;
+            height:100%;
+            display: flex;
+            margin-right:10px;
+            border-radius: 4px;
+        }
+        
+        
+        /* the form to receive the searh input*/
+        #search-input {
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        /* clear-button to clear search input */
+        #clear-button {
+            background-color: #fff;
+            border: none;
+            border-radius:4px;
+            color: gray;
+            padding: 0 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-family: 'Roboto',sans-serif;
+        }
+        
+        #clear-button:hover {
+            background-color: #000034; /* Change color on hover if desired */
+            transition: background-color 0.3s
+        }
+        
+        /* the search button used to submit*/
+        .search-button {
+            background-color: #000090;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+
+        #intro-box {
+            font-family: 'Outfit', sans-serif;
+            margin-left: 100px;
+            margin-bottom: 20px; /* Adjust the bottom margin of the container if needed */
+        }
+
+        #intro-box h1 {
+            margin-bottom: 5px; /* Adjust the bottom margin of the h1 element */
+        }
+
+        #intro-box p {
+            margin-top: 0; /* Remove default top margin of the p element */
+        }
+
+        .profile-container {
+            font-family: 'Outfit', sans-serif;
+            background-color: #fff;
+            margin-left: 100px;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 1300px;
+        }
+        .profile-container h2 {
+            text-align: none;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th:first-child, td:first-child {
+            width: 130px; /* Fixed width for the first column */
+            white-space: nowrap;
+        }
+        th:last-child, td:last-child {
+            white-space: nowrap;
+        }
+
+        .show-hide-btn, .copy-btn {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .top-button-left{
+            float: right;
+            
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            font-size: 12px;
+        }
+
+        .label-left,
+        .label-right {
+            font-size: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button2 {
+            color: rgb(177, 177, 177);
+            background-color: #000000;
+            border: none;
+            padding: 4px 4px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            margin: 0 10px; /* Adjust margin as needed */
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+
+        /* When the above button is active (Clicked)*/
+        .top-button2.active {
+            color: rgb(255, 255, 255)
+        }
+
+        
+
+
+
+    </style>
+
+</head>
+
+<body>
+    <div id="top-box">
+        <a href="map.html" style="text-decoration: none;">
+            <p style="color: white; font-family: 'Outfit', sans-serif; margin: 0px;">Altair Research Lab</p>
+        </a>
+        <p style="color: white; font-family: 'Outfit', sans-serif; margin-left: 80px; font-weight: 300;">FleetEye/EarthView</p>
+        <div class="top-button-left">
+            <button id="btnProfile" class="top-button2"><i class='bx bxs-user-circle'></i></button>
+            <button id="btnLogout" class="top-button2"><i class='bx bx-log-out-circle'></i></button>
+        </div>
+    </div>
+
+    <div id="intro-box">
+        <h1>Profile</h1>
+    </div>
+
+    <div class="profile-container">
+        <h2>Account Details</h2>
+        <table>
+            <tr>
+                <th>First Name:</th>
+                <td id="firstname">Loading...</td>
+            </tr>
+            <tr>
+                <th>Last Name:</th>
+                <td id="lastname">Loading...</td>
+            </tr>
+            <tr>
+                <th>Organization:</th>
+                <td id="organization">Loading...</td>
+            </tr>
+            <tr>
+                <th>Email:</th>
+                <td id="email">Loading...</td>
+            </tr>
+            <tr>
+                <th>Package:</th>
+                <td id="package">Loading...</td>
+            </tr>
+            <tr>
+                <th>Status:</th>
+                <td id="tokenstatus">Loading...</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="profile-container">
+        <h2>Authentication Token</h2>
+        <table>
+            <tr>
+                <th>Token:</th>
+                <td>
+                    <span id="token">********</span>
+                    <button class="show-hide-btn" onclick="toggleVisibility('token')">Show</button>
+                    <button class="copy-btn" onclick="copyToClipboard('token')">Copy</button>
+                </td>
+            </tr>
+            <tr>
+                <th>Token Created:</th>
+                <td>
+                    <span id="timecreated">********</span>
+                    <button class="show-hide-btn" onclick="toggleVisibility('timecreated')">Show</button>
+                    <button class="copy-btn" onclick="copyToClipboard('timecreated')">Copy</button>
+                </td>
+            </tr>
+            <tr>
+                <th>Token Expiry:</th>
+                <td>
+                    <span id="timeexpiry">********</span>
+                    <button class="show-hide-btn" onclick="toggleVisibility('timeexpiry')">Show</button>
+                    <button class="copy-btn" onclick="copyToClipboard('timeexpiry')">Copy</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+<script>
+    // Function to populate the HTML with sessionStorage data
+    function populateProfile() {
+        document.getElementById('firstname').textContent = sessionStorage.getItem('firstname') || 'N/A';
+        document.getElementById('lastname').textContent = sessionStorage.getItem('lastname') || 'N/A';
+        document.getElementById('organization').textContent = sessionStorage.getItem('organization') || 'N/A';
+        document.getElementById('email').textContent = sessionStorage.getItem('email') || 'N/A';
+        document.getElementById('package').textContent = sessionStorage.getItem('package') || 'N/A';
+        // Initially masking the sensitive information
+        document.getElementById('token').dataset.value = sessionStorage.getItem('token') || 'N/A';
+        document.getElementById('timecreated').dataset.value = sessionStorage.getItem('timecreated') || 'N/A';
+        document.getElementById('timeexpiry').dataset.value = sessionStorage.getItem('timeexpiry') || 'N/A';
+        
+        checkTokenStatus();
+    
+    }
+
+    // Function to toggle visibility of sensitive information
+    function toggleVisibility(id) {
+        const element = document.getElementById(id);
+        const button = element.nextElementSibling;
+        if (element.textContent === '********') {
+            element.textContent = element.dataset.value;
+            button.textContent = 'Hide';
+        } else {
+            element.textContent = '********';
+            button.textContent = 'Show';
+        }
+    }
+
+    // Function to copy content to clipboard
+    function copyToClipboard(id) {
+        const text = document.getElementById(id).dataset.value;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Copied to clipboard!');
+        }).catch(err => {
+            alert('Failed to copy!');
+        });
+    }
+
+    // Function to check token status
+    function checkTokenStatus() {
+    const timeCreated = sessionStorage.getItem('timecreated');
+    const timeExpiry = sessionStorage.getItem('timeexpiry');
+    const tokenStatusElement = document.getElementById('tokenstatus');
+    
+    if (!timeCreated || !timeExpiry) {
+        tokenStatusElement.textContent = 'N/A';
+        return;
+    }
+    
+    const currentTime = new Date();
+    const expiryTime = new Date(timeExpiry);
+
+    if (currentTime <= expiryTime) {
+        tokenStatusElement.textContent = 'Active';
+    } else {
+        tokenStatusElement.textContent = 'Inactive';
+    }
+    }
+
+    // Populate profile on page load
+    window.onload = populateProfile;
+
+    // Logout functionality
+    document.getElementById('btnLogout').addEventListener('click', function() {
+        // Remove user information from local storage
+        sessionStorage.removeItem('email');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('firstname');
+        sessionStorage.removeItem('lastname');
+        sessionStorage.removeItem('organization');
+        sessionStorage.removeItem('timecreated');
+        sessionStorage.removeItem('timeexpiry');
+        sessionStorage.removeItem('package');
+
+        // Redirect to the logout page or perform other logout actions
+        window.location.href = 'index.html';
+    });
+    
+    document.getElementById('btnPort').addEventListener('click', function() {
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'port.html';
+    });
+
+    document.getElementById('btnProfile').addEventListener('click', function() {
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'profile.html';
+    });
+
+    document.getElementById('map-top-button').addEventListener('click', function() {
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'map.html';
+    });
+
+
+</script>
+
+</html>

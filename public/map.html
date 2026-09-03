@@ -1,0 +1,2970 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- 
+    This script shows the GUI for the AIS message in the map
+    -->
+    
+    <title>NaviSense</title>
+    <link rel="icon" href="AltairLogo2.jpg" type="image/png">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Include Folium CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Include Folium JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.12.0/leaflet-providers.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <!-- Include Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
+
+    
+    <style>
+        body {
+            margin: 0; /* Remove default margin to make the top-bar full width */
+            background-color: #000015;
+        }
+        
+        #top-box {
+            height: 10px;
+            width: auto;
+            display: flex;                 /* Enable flexbox */
+            justify-content: space-between;/* Distribute items to left and right */
+            align-items: center;           /* Vertically center the elements */
+            background-color: transparent; /* Make background clear */
+            padding: 10px;                 /* Add some padding */
+        }
+
+        p {
+            margin: 0;                /* Remove default margin */
+        }
+
+        .top-button-left {
+            display: flex;            /* To align the buttons horizontally */
+        }
+
+        /* Angkasa-X Logo at the left of top bar*/
+        #top-logo {
+            max-height: 90%; /* Adjust max-height to fit the top bar's height */
+            object-fit: contain;
+            margin: 10px 0;
+            padding: 10px;
+        }
+        
+        /* Container for the button MAP, VESSELS, PORTS, MORE*/
+        .top-button-container {
+            display: flex;
+            align-items: center;
+            float: right;
+        }
+
+        .top-button-left{
+            float: right;
+            
+        }
+        
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button {
+            color: rgb(252, 252, 252);
+            background-color: #000000;
+            border: none;
+            padding: 10px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            margin: 0 10px; /* Adjust margin as needed */
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+
+        /* When the above button is active (Clicked)*/
+        .top-button.active {
+            color: rgb(227, 247, 9)
+        }
+
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button2 {
+            color: rgb(177, 177, 177);
+            background-color: #000000;
+            border: none;
+            padding: 10px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            margin: 0 10px; /* Adjust margin as needed */
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+
+        /* When the above button is active (Clicked)*/
+        .top-button2.active {
+            color: rgb(255, 255, 255)
+        }
+        
+        /* Container for search form overlay on map */
+        #search-form {
+            position: absolute;        /* overlay on top of map */
+            top: 20px;                 /* distance from top */
+            left: 52%;                 /* center horizontally */
+            transform: translateX(-50%); /* offset by half its width */
+            display: flex;
+            align-items: center;
+            width: 300px;              /* fixed width */
+            z-index: 1000;             /* ensure it's above map layers */
+        }
+
+        /* Container for search-box and clear button */
+        #search-input-form {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            height: 40px;              /* explicit height */
+        }
+
+        /* Search input box container */
+        #search-box {
+            background-color: white;
+            width: 70%;
+            height: 100%;
+            display: flex;
+            align-items: center;       /* vertically center text */
+            margin-right: 10px;
+            border-radius: 4px;
+            padding: 0 5px;            /* optional inner padding */
+        }
+
+        /* Input inside the box */
+        #search-input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            background: transparent;
+        }
+
+        /* Clear button styling */
+        #clear-button {
+            background-color: #fff;
+            border: none;
+            border-radius: 4px;
+            color: gray;
+            padding: 0 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        #clear-button:hover {
+            background-color: #000034; /* hover effect */
+            transition: background-color 0.3s;
+        }
+
+        /* Search submit button styling */
+        .search-button {
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        
+        /* blanket container to darken the website to hold the token bar*/
+        #token-container {
+            background-color: rgba(0, 0, 21, 0.75);
+            z-index: 1000;
+            position: absolute;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center; /* Horizontal centering */
+            align-items: center; /* Vertical centering */
+            margin-top:-45px;
+        }
+        
+        /* act as like login page, but for token*/
+        #token-bar{
+            background-color: #000034;
+            z-index:1001;
+            width: auto;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            border-radius: 5px;
+            align-items: center;
+            border: 1px solid #ADD8E6;
+        }
+        
+        /* container to hold the token input and the apply button*/
+        #token-form{
+            background-color: transparent;
+            width: 600px;
+            height: auto;
+            display: flex;
+            border-radius: 5px;
+            margin:0 10px;
+        }
+        
+        /* the form to receive the token*/
+        #token-input {
+            flex-grow: 1;
+            margin:5px;
+            font-size:12px;
+            font-family: 'Outfit', sans-serif;
+            padding: 5px;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        /* description to show for any error*/
+        .form-error {
+            font-size: 12px;
+            color: red;
+            font-family: 'Outfit', sans-serif;
+            margin-top: -4px;
+            bottom: 0;
+            margin-left: -480px;
+            
+        }
+        
+        /* free trial button to register*/
+        #trial-button-container {
+            display: flex;
+            margin: 0 10px;
+            width: 400px;
+            border-radius: 5px;
+            padding-top: 5px;
+        }
+        
+        #free-trial-button{
+            background-color: rgba(100,0,0,1);
+            width: 100%;
+            margin: 10px;
+            border: 1px solid white;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        /* button to apply the token */
+        #token-form input[type="submit"]{
+            background-color: #000090;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            border-radius: 4px;
+            margin:5px;
+        }
+        
+        /* logo at token bar*/
+        #token-logo{
+            width:60%;
+            max-height: 50%;
+            padding:10px;
+        }
+        
+        /* text below logo in token bar*/
+        #token-text{
+            color:white;
+            font-family: 'Roboto' ,sans-serif;
+            font-size: 30px;
+            font-weight: bold;
+            padding-bottom: 30px;
+        }
+        
+        /* container to hold username and email form*/
+        #register-form{
+            background-color: rgba(255, 255, 255, 0.1);
+            width: 600px;
+            border-radius: 5px;
+            margin: 10px 10px;
+            padding: 10px; /* Increased padding for spacing */
+            text-align: right; /* To align the forms and button to the right */
+        }
+        
+        /* the container for username and email registry*/
+        #username-form, #email-form {
+            background-color: transparent;
+            color:white;
+            font-size: 16px;
+            font-family: 'Outfit', sans-serif;
+            width: 100%;
+            margin-bottom: 10px; /* Added spacing between forms */
+            padding: 0 0px; /* Increased padding for spacing */
+            box-sizing: border-box; /* Ensure padding doesn't affect width */
+        }
+        
+        /* the form to enter email and username*/
+        #username-input, #email-input {
+            width: 80%;
+            padding: 5px;
+            font-size: 16px;
+            font-family: 'Outfit', sans-serif;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        #register-button, #back-button, #copy-token {
+            width: auto;
+            background-color: #000090;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Outfit', sans-serif;
+        }
+        /* button to copy token*/
+        #copy-token{
+            margin-top: 5px;
+            margin-bottom: 10px;
+            margin-left: 480px;
+        }
+
+        /* button to go back to token login*/
+        #back-button {
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        /* Add hover effect to the button */
+        #register-button:hover {
+            background-color: #0056b3;
+        }
+        
+        /* container to show account information*/
+        #account-form{
+            background-color: rgba(255, 255, 255, 0.1);
+            width: 600px;
+            border-radius: 5px;
+            margin: 5px 5px;
+            padding: 5px; /* Increased padding for spacing */
+            text-align: left; /* To align the forms and button to the right */
+        }
+        
+        #account-content {
+            max-width: 100%;
+            color: white;
+            border-radius: 10px;
+            background-color: rgba(0,0,53,0.8);
+            border: 1px solid #ADD8E6;
+            font-family: "Roboto", sans-serif;
+            font-size: 16px;
+            line-height: 1;
+        }
+        
+        .account-info-table {
+            width: auto; /* Allow columns to adjust automatically */
+            border-collapse: collapse;
+            margin: 5px;
+            table-layout: auto; /* Use auto for table layout */
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        .account-info-table th, .account-info-table td {
+            border: none;
+            padding: 5px;
+            white-space: normal;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Add ellipsis for long content */
+            word-wrap: break-word; /* Allow content to break and wrap */
+            font-family: 'Outfit', sans-serif;
+        }
+        
+                /* Manually set max-width for each column */
+        .account-info-table th:nth-child(1),
+        .account-info-table td:nth-child(1) {
+            max-width: 120px; /* Set max-width for the first column */
+        }
+        
+        .account-info-table th:nth-child(2),
+        .account-info-table td:nth-child(2) {
+            max-width: 10px; /* Set max-width for the second column */
+        }
+        
+        .account-info-table th:nth-child(3),
+        .account-info-table td:nth-child(3) {
+            max-width: 450px; /* Set max-width for the third column */
+        }
+        
+        /* container to hold loading screen*/
+        #loading-container {
+            background-color: rgba(0, 0, 21, 0.3);
+            z-index: 1001;
+            position: absolute;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center; /* Horizontal centering */
+            align-items: center; /* Vertical centering */
+        }
+        
+        /* loading animation*/
+        @keyframes rotateAnimation {
+            0%, 9% {
+            transform: rotate(0deg);
+            }
+            10%, 19% {
+            transform: rotate(45deg);
+            }
+            20%, 29% {
+            transform: rotate(0deg);
+            }
+            30%, 39% {
+            transform: rotate(-45deg);
+            }
+            40%, 49% {
+            transform: rotate(0deg);
+            }
+            50% {
+            transform: rotate(0deg);
+            }
+        }
+         
+        /* image for loading animation*/   
+        #loading-image {
+            width: 15%;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: rotateAnimation 2s steps(1) infinite;
+        }
+        
+        /* Add styles for the map container */
+        #map-container {
+            position: fixed;
+            width: 100%;
+            height: calc(100vh); /* Calculate height to fill the remaining screen */
+            background-color: #ffffff;
+
+        }
+
+        #map-layer-buttons, #mode-buttons, #date-time-form, #time-interval-buttons, #reset-box, #test-box, #source-buttons {
+            width:180px; 
+            text-align:center;
+            position: absolute;
+            left: 200px;
+            background-color: rgba(255, 255, 255, 0.75);
+            border-radius: 5px;
+            padding: 5px;
+            z-index: 999
+        }
+
+        #left-column{
+            width:50px; 
+            height: calc(100vh); /* Calculate height to fill the remaining screen */
+            text-align:center;
+            position: absolute;
+            left: 0px;
+            background-color: rgb(255, 255, 255);
+            /* border-radius: 5px; */
+            padding: 5px;
+            box-shadow: 3px 0 5px rgba(0, 0, 0, 0.1); /* Soft shading to the right */
+            z-index: 999
+        }
+
+        #left-column-popup{
+            width:100px; 
+            height: calc(100vh - 45px); /* Calculate height to fill the remaining screen */
+            text-align:center;
+            position: absolute;
+            left: 60px;
+            background-color: rgb(255, 255, 255);
+            /* border-radius: 5px; */
+            padding: 5px;
+            box-shadow: 0 -3px 5px rgba(0, 0, 0, 0.1); /* Shadow at the bottom of the popup */
+            z-index: 999
+        }
+        
+        #date-time-form {
+            top: 110px;
+            left: 10px;
+            width: 230px;
+            display: flex;
+            flex-direction: column;
+            margin: 5px auto;
+            text-align: left;
+            margin-left: 70px;
+        }
+        
+        #from-date{
+             width: 90px;
+             margin-left: 0px;
+        }
+
+        #to-date {
+             width: 90px;
+             margin-left: 5px;
+        }
+        
+        #from-time{
+            width: 80px;
+            margin-left: 2px;
+        }
+
+        #to-time {
+            width: 80px;
+            margin-left: 2px;
+        }
+        
+        #duration-bar input[type="submit"] {
+            display: block;               /* Make it block-level */
+            margin: 5px auto;             /* Center horizontally */
+            width: 200px;
+            background-color: rgba(0,0,53,0.1);
+            border: 1px solid #000035;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            padding: 3px 6px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        #duration-bar input[type="submit"]:active {
+            background-color: #000035; /* Change this to the color you want when the button is pressed */
+            color: #ffffff; /* Change this to the text color you want when the button is pressed */
+        }
+        
+        #time-interval-buttons {
+            top: 210px;
+            left: 10px;
+            width: auto;
+            display: flex;
+            flex-direction: column;
+            margin-top: 5px;
+            margin-left: 70px;
+        }
+        
+        .form-text{
+            font-family: 'Outfit', sans-serif; 
+            font-size: 10px;
+        }
+        
+        .map-layer-button, .mode-button, #reset-button, #test-button, .source-button{
+            background-color: transparent;
+            justify-content: flex-start; /* align items to the left */
+            align-items: center;
+            border: none;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            margin-right: 5px;
+            padding: 3px 6px;
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+            color: rgb(0, 0, 0)
+        }
+        
+        #reset-button, #test-button{
+            margin-right:0px;
+        }
+        
+        .time-interval-button{
+            background-color: rgba(0,0,53,0.1);
+            border:1px solid #000035;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            padding: 3px 6px;
+            margin: 2px 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .map-layer-button:hover, .map-layer-button.active, 
+        .mode-button:hover, .mode-button.active, 
+        .time-interval-button:hover, .time-interval-button.active,
+        .source-button:hover, .source-button.active,
+        #reset-button:hover, #reset-button:active,
+        #test-button:hover, #test-button:active{
+            background-color: #f70404;
+            color: rgb(0, 0, 0);
+        }
+        
+
+        #map-image {
+            width: 75%;
+            /* Make the image fill the container width */
+            max-height: 100%;
+            /* Adjust the image height as needed */
+            object-fit: contain;
+            /* Maintain aspect ratio */
+            margin-bottom: 10px;
+            /* Add space between image and info content */
+            position: absolute;
+            top: 25%;
+            left: 15%;
+        }
+        
+        #result-count {
+            background-color: rgba(0,0,53,0.4); /* Background color for the bubble */
+            color: #fff; /* Text color inside the bubble */
+            border-radius: 50px; /* Rounded corners for the bubble */
+            padding: 10px; /* Padding inside the bubble */
+            max-width: 300px; /* Maximum width of the bubble */
+            display: inline-block; /* Makes the bubble wrap around the content */
+            z-index:1001;
+            position: absolute;
+            left: 43%;
+            top:10px;
+            font-family: "Outfit", sans-serif;
+            font-size: 12px;
+        }
+        
+        #user-text {
+            font-family: 'Outfit', sans-serif;
+            background-color: rgba(0,0,53,0.4); /* Background color for the bubble */
+            color: #fff; /* Text color inside the bubble */
+            border-top-left-radius: 50px;
+            border-bottom-left-radius: 50px;
+            padding: 5px 10px; /* Padding inside the bubble */
+            max-width: 300px; /* Maximum width of the bubble */
+            display: inline-block; /* Makes the bubble wrap around the content */
+            z-index:1001;
+            position: absolute;
+            right: 0;
+            top:0;
+            font-size: 12px;
+        }
+
+        #stat-text {
+            width: auto;
+            background-color: rgba(0,0,53,0.4); /* Background color for the bubble */
+            color: #fff; /* Text color inside the bubble */
+            padding: 5px 10px; /* Padding inside the bubble */
+            display: inline-block; /* Makes the bubble wrap around the content */
+            z-index: 1001;
+            position: absolute;
+            left: 50%; /* Center the element horizontally */
+            bottom: 0px;
+            transform: translateX(-50%); /* Adjust for the element's width */
+            font-family: "Outfit", sans-serif;
+            font-size: 12px;
+        }
+
+        .custom-icon {
+            width: 10px;
+            height: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Styles for the triangle shape */
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 3px solid transparent;
+            border-bottom: 10px solid;
+
+            transform-origin: center center;
+
+            /* ✅ Rotation + scale driven by CSS variables */
+            transform: rotate(var(--rotation, 0deg)) scale(var(--scale, 1));
+
+            opacity: 1;
+        }
+        
+        #info-box {
+            font-family: 'Outfit', sans-serif;
+            width: 23%;
+            height: 70%;
+            background-color: rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            border: 3px solid #ADD8E6;
+            border-radius: 10px;
+            position: absolute;
+            top: 0;
+            right: 0; 
+            transform: translateX(-150px); /* Shift 20px to the left */
+            z-index: 999;
+            margin: 50px 0 0 0; /* margin-left removed, only top margin remains */
+        }
+
+
+        #info-box2 {
+            font-family: 'Outfit', sans-serif;
+            width: 500px;
+            height: 500px;
+            float: right; /* Change from right to left */
+            background-color: rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            border: 3px solid #ADD8E6;
+            border-radius: 10px;
+            position: absolute;
+            top: 60px;
+            right: 0; 
+            z-index: 999;
+            margin: 5px 0 0 5px; /* Adjust margin for the left */
+        }
+        
+        /* Additional styling for the content inside the info box */
+        #info-content{
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+            color: white;
+            /* Add font styles here */
+            font-family: "Outfit", sans-serif;
+            font-size: 14px;
+            line-height: 1;
+            padding-left: 5px;
+            padding-right:5px;
+        }
+
+        /* Add the following CSS class for the table */
+        .info-table {
+            width: 100%;
+            background-color: rgba(48, 48, 48, 0.8);
+            border: 1px solid #ADD8E6;
+            border-radius: 10px;
+        }
+        
+        /* Style for table data cells */
+        .info-table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        
+        #close-button{
+            color: #fff; 
+            background-color: transparent; 
+            border: none; 
+            font-size: 20px; 
+            cursor: pointer;
+        }
+        
+        #copyright {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            z-index: 999;
+            /* Set a higher z-index to ensure it's displayed in front */
+            background-color: rgba(0, 0, 53, 0.3);
+            padding: 3px;
+            color: white;
+            font-size:10px;
+            font-family: 'Outfit', sans-serif;
+            text-align: left;
+        }
+        
+        #token-loading-container {
+            background-color: transparent;
+            z-index: 1100;
+            position: absolute;
+            width: 700px;
+            height: 300px;
+            display: flex;
+            justify-content: center; /* Horizontal centering */
+            align-items: center; /* Vertical centering */
+        }
+        
+        #token-loading-image {
+            width: 30%;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: rotateAnimation 2s steps(1) infinite;
+        }
+
+
+        .loader {
+            width: 100px;
+            height: 40px;
+            --g: radial-gradient(farthest-side,#0000 calc(95% - 3px),#fff calc(100% - 3px) 98%,#0000 101%) no-repeat;
+            background: var(--g), var(--g), var(--g);
+            background-size: 30px 30px;
+            animation: l9 1s infinite alternate;
+            }
+            @keyframes l9 {
+            0% {
+                background-position: 0 50%, 50% 50%, 100% 50%;
+            }
+            20% {
+                background-position: 0 0, 50% 50%, 100% 50%;
+            }
+            40% {
+                background-position: 0 100%, 50% 0, 100% 50%;
+            }
+            60% {
+                background-position: 0 50%, 50% 100%, 100% 0;
+            }
+            80% {
+                background-position: 0 50%, 50% 50%, 100% 100%;
+            }
+            100% {
+                background-position: 0 50%, 50% 50%, 100% 50%;
+            }
+            }
+
+        #left-button:hover {
+            background-color: #66BB6A;
+        }
+        #fleet-button:hover {
+            background-color: #64B5F6;
+        }
+        #details-button:hover {
+            background-color: #FF8A65;
+        }
+
+        @keyframes ripple {
+        0% {
+            transform: scale(0);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(4); /* Make the ripple grow larger */
+            opacity: 0.3; /* Fade the ripple as it grows */
+        }
+        100% {
+            transform: scale(6); /* Make it even larger for the full effect */
+            opacity: 0; /* Fully fade out at the end */
+        }
+        }
+
+        .pulse-animation {
+        animation: ripple 1.5s ease-out infinite; /* Infinite animation */
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(0, 0, 255, 0.3); /* Light blue color for the ripple */
+        pointer-events: none; /* Prevent interaction with the ripple */
+        z-index: 1000; /* Ensure it's on top of the marker */
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            font-size: 12px;
+        }
+
+        .label-left,
+        .label-right {
+            font-size: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        
+
+        
+    </style>
+</head>
+<body>
+
+    <div id="search-form">
+        <form id="search-input-form">
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search NaviSense">
+                <button type="submit" class="search-button"><i class='bx bx-search'></i></button>
+            </div>
+        </form>
+    </div>
+
+
+    <div id="info-box2" style="display: none;">
+        <h3>FleetEye Global Tasking</h3>
+        <h3>FleetEye Global Tasking</h3>
+        <h3>FleetEye Global Tasking</h3>
+        <h3>FleetEye Global Tasking</h3>
+    </div>
+
+    <div id="token-container">
+        <div id="token-bar">
+            <div id="token-loading-container">
+            </div>
+        </div>
+    </div>
+
+
+    
+
+
+    <!-- Create a div to hold the map -->
+    <div id="map-container">
+
+        <div id="left-column" style="top: 0px;">
+            <i id="map-top-button" class='bx bx-globe' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+            <i id="filter-icon" class='bx bx-filter-alt' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+            <i id="layer-icon" class='bx bx-layer' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+            <i id="history-button" class='bx bx-time' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+            <i id="toggleHeatmapBtn" class='bx bx-analyse' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+            <i id="btnProfile" class='bx bx-user-circle' style="font-size: 28px; margin-top: 560px; cursor: pointer;"></i>
+            <i id="btnLogout" class='bx bx-log-out-circle' style="font-size: 28px; margin-top: 20px; cursor: pointer;"></i>
+        </div>
+
+
+        <!-- Right popup -->
+        <div id="right-popup-layers" style="display: none;">
+            <div id="left-column-popup" style="top: 0px;">
+                <!-- Layers Section -->
+                <h3>Layers</h3>
+                <button id="street-map-button" class="map-layer-button">Map</button>
+                <button id="satellite-map-button" class="map-layer-button">Satellite</button>
+                <button id="dark-matter-map-button" class="map-layer-button">Dark</button>
+
+                <hr style="margin: 15px 0; border: 1px solid #ccc;">
+                
+                <!-- Vessel Class Section -->
+                <h3>Vessel Class</h3>
+                <button id="vessel-class-a" class="map-layer-button">Class A</button>
+                <button id="vessel-class-b" class="map-layer-button">Class B</button>
+                <br> <!-- adds spacing -->
+                <button id="vessel-class-all" class="map-layer-button">All</button>
+            </div>
+        </div>
+
+        <div id="right-popup-filter" style="display: none;">
+            <div id="left-column-popup" style="top: 0px;">
+                <h3>Filter</h3>
+                
+                <button id="satellite-data-button" class="source-button">Satellite Data</button>
+                <button id="all-data-button" class="source-button">Terrestrial Data</button>
+                <!-- <button id="terrestrial-data-button" class="source-button">Terrestrial Data</button> -->
+            </div>
+        </div>
+        
+        
+        <!-- <div id="mode-buttons" style="top: 45px;">
+            <button id="live-button" class="mode-button" style="margin-left:0px;">Live</button>
+            <button id="history-button" class="mode-button" style="margin-left:20px;">Track</button>
+        </div> -->
+        <!-- <div id="source-buttons" style="top: 50px; left:200px; width:285px;">
+            <button id="all-data-button" class="source-button">All Data </button>
+            <button id="satellite-data-button" class="source-button">Satellite Data</button>
+            <button id="terrestrial-data-button" class="source-button">Terrestrial Data</button>
+        </div> -->
+        <!-- <div id="reset-box" style="left:245px; top:10px; width:50px;">
+            <button id="reset-button" >Reset</button>
+        </div> -->
+        <!-- <div id="test-box" style="left:245px; top:45px; width:50px;">
+            <button id="test-button" >Test</button>
+        </div> -->
+        <div id = "result-count"></div>
+        <div id = "user-text"></div>
+        <div id = "stat-text"></div>
+
+
+        <div id="duration-bar">
+            <div id="date-time-form">
+                <form style="padding: 4px 0;">
+                    <label for="from-date" class="form-text">From:</label>
+                    <input type="date" id="from-date" class="form-text"/>
+                    <input type="time" id="from-time" class="form-text" />
+                </form>
+                <form>
+                    <label for="to-date" class="form-text">Until: </label>
+                    <input type="date" id="to-date" class="form-text" />
+                    <input type="time" id="to-time" class="form-text" />
+                </form>
+                <form>
+                    <input type="submit" value="Apply" />
+                </form>
+            </div>
+        
+            <div id="time-interval-buttons">
+                <button id="30m" class="time-interval-button">30m</button>
+                <button id="1h" class="time-interval-button">1H</button>
+                <!-- <button id="3h" class="time-interval-button">3H</button>
+                <button id="6h" class="time-interval-button">6H</button> -->
+                <button id="12h" class="time-interval-button">12H</button>
+                <button id="1d" class="time-interval-button">1D</button>
+                <button id="5d" class="time-interval-button">5D</button>
+                <button id="1w" class="time-interval-button">1W</button>
+                <button id="2w" class="time-interval-button">2W</button>
+                <button id="1m" class="time-interval-button">1M</button>
+                <button id="3m" class="time-interval-button">3M</button>
+                <button id="6m" class="time-interval-button">6M</button>
+                <button id="1y" class="time-interval-button">1Y</button>
+            </div>
+        </div>
+
+        <div id="loading-container">
+            <div class="loader"></div>
+        </div>
+        <div id="info-box">
+            <div id="close-button-container"></div>
+            <button id="close-button">×</button>
+            <div id="info-content"></div>
+
+            <div id="info-buttons" style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
+                <button id="left-button" style="padding: 10px 20px; font-size: 13px; color: white; font-family: 'Outfit', sans-serif; border-radius: 5px; background-color: #4CAF50; transition: background-color 0.3s;">Track</button>
+                <button id="fleet-button" style="padding: 10px 20px; font-size: 13; color: white; font-family: 'Outfit', sans-serif; border-radius: 5px; background-color: #2196F3; transition: background-color 0.3s;">Fleet</button>
+                <button id="details-button" style="padding: 10px 20px; font-size: 13; color: white; font-family: 'Outfit', sans-serif; border-radius: 5px; background-color: #FF5722; transition: background-color 0.3s;">Details</button>
+            </div>
+            
+            
+        </div>
+        <!-- <div id="copyright">© 2025 ALTAIR RESEARCH LAB. All Rights Reserved.</div> -->
+    </div>
+
+    <div id="success-message" style="display: none; position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; font-size: 16px;">
+        <span id="success-icon" style="font-size: 20px;">✔</span> MMSI copied to clipboard!
+    </div>
+    
+    <script>
+        function copyToClipboard2(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show the success message
+                const successMessage = document.getElementById('success-message');
+                successMessage.style.display = 'block';
+
+                // Hide the success message after 2 seconds
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 2000); // Hide after 2 seconds
+            }).catch(err => {
+                console.error('Failed to copy MMSI:', err);
+            });
+        }
+    </script>
+
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // document.getElementById('toggleMap').addEventListener('change', function () {
+        //     if (this.checked) {
+        //         window.location.href = 'eomap.html';
+        //     } else {
+        //         window.location.href = 'map.html';
+        //     }
+        // });
+
+        // // Optional: Set switch based on current page
+        // window.addEventListener('DOMContentLoaded', function () {
+        //     const currentPage = window.location.pathname.split('/').pop();
+        //     document.getElementById('toggleMap').checked = (currentPage === 'eomap.html');
+        // });
+
+
+
+        const countryCodes = {
+            "Afghanistan": "AF",
+            "Albania": "AL",
+            "Algeria": "DZ",
+            "Andorra": "AD",
+            "Angola": "AO",
+            "Antigua and Barbuda": "AG",
+            "Argentina": "AR",
+            "Armenia": "AM",
+            "Australia": "AU",
+            "Austria": "AT",
+            "Azerbaijan": "AZ",
+            "Bahamas": "BS",
+            "Bahrain": "BH",
+            "Bangladesh": "BD",
+            "Barbados": "BB",
+            "Belarus": "BY",
+            "Belgium": "BE",
+            "Belize": "BZ",
+            "Benin": "BJ",
+            "Bermuda": "BM",
+            "Bhutan": "BT",
+            "Bolivia": "BO",
+            "Bosnia and Herzegovina": "BA",
+            "Botswana": "BW",
+            "Brazil": "BR",
+            "Brunei": "BN",
+            "Bulgaria": "BG",
+            "British Virgin Islands": "VG",
+            "Burkina Faso": "BF",
+            "Burundi": "BI",
+            "Cabo Verde": "CV",
+            "Cayman Islands": "KY",
+            "Cambodia": "KH",
+            "Cameroon": "CM",
+            "Canada": "CA",
+            "Central African Republic": "CF",
+            "Chad": "TD",
+            "Chile": "CL",
+            "China": "CN",
+            "Colombia": "CO",
+            "Comoros": "KM",
+            "Congo (Congo-Brazzaville)": "CG",
+            "Congo (Democratic Republic of the Congo)": "CD",
+            "Costa Rica": "CR",
+            "Croatia": "HR",
+            "Cuba": "CU",
+            "Cyprus": "CY",
+            "Czechia (Czech Republic)": "CZ",
+            "Denmark": "DK",
+            "Djibouti": "DJ",
+            "Dominica": "DM",
+            "Dominican Republic": "DO",
+            "Ecuador": "EC",
+            "Egypt": "EG",
+            "El Salvador": "SV",
+            "Equatorial Guinea": "GQ",
+            "Eritrea": "ER",
+            "Estonia": "EE",
+            "Eswatini": "SZ",
+            "Ethiopia": "ET",
+            "Fiji": "FJ",
+            "Finland": "FI",
+            "France": "FR",
+            "Gabon": "GA",
+            "Gambia": "GM",
+            "Georgia": "GE",
+            "Germany": "DE",
+            "Ghana": "GH",
+            "Greece": "GR",
+            "Grenada": "GD",
+            "Guatemala": "GT",
+            "Guinea": "GN",
+            "Guinea-Bissau": "GW",
+            "Guyana": "GY",
+            "Haiti": "HT",
+            "Honduras": "HN",
+            "Hungary": "HU",
+            "Hong Kong": "HK",
+            "Iceland": "IS",
+            "India": "IN",
+            "Indonesia": "ID",
+            "Iran": "IR",
+            "Iraq": "IQ",
+            "Ireland": "IE",
+            "Israel": "IL",
+            "Italy": "IT",
+            "Jamaica": "JM",
+            "Japan": "JP",
+            "Jordan": "JO",
+            "Kazakhstan": "KZ",
+            "Kenya": "KE",
+            "Kiribati": "KI",
+            "Korea (North)": "KP",
+            "Korea": "KR",
+            "Kuwait": "KW",
+            "Kyrgyzstan": "KG",
+            "Laos": "LA",
+            "Latvia": "LV",
+            "Lebanon": "LB",
+            "Lesotho": "LS",
+            "Liberia": "LR",
+            "Libya": "LY",
+            "Liechtenstein": "LI",
+            "Lithuania": "LT",
+            "Luxembourg": "LU",
+            "Madagascar": "MG",
+            "Malawi": "MW",
+            "Malaysia": "MY",
+            "Maldives": "MV",
+            "Mali": "ML",
+            "Malta": "MT",
+            "Marshall Islands": "MH",
+            "Mauritania": "MR",
+            "Mauritius": "MU",
+            "Mexico": "MX",
+            "Micronesia": "FM",
+            "Moldova": "MD",
+            "Monaco": "MC",
+            "Mongolia": "MN",
+            "Montenegro": "ME",
+            "Morocco": "MA",
+            "Mozambique": "MZ",
+            "Myanmar": "MM",
+            "Namibia": "NA",
+            "Nauru": "NR",
+            "Nepal": "NP",
+            "Netherlands": "NL",
+            "New Zealand": "NZ",
+            "Nicaragua": "NI",
+            "Niger": "NE",
+            "Nigeria": "NG",
+            "North Macedonia": "MK",
+            "Norway": "NO",
+            "Oman": "OM",
+            "Pakistan": "PK",
+            "Palau": "PW",
+            "Panama": "PA",
+            "Papua New Guinea": "PG",
+            "Paraguay": "PY",
+            "Peru": "PE",
+            "Philippines": "PH",
+            "Poland": "PL",
+            "Portugal": "PT",
+            "Qatar": "QA",
+            "Romania": "RO",
+            "Russia": "RU",
+            "Rwanda": "RW",
+            "Saint Kitts and Nevis": "KN",
+            "Saint Lucia": "LC",
+            "Saint Vincent and the Grenadines": "VC",
+            "Samoa": "WS",
+            "San Marino": "SM",
+            "Sao Tome and Principe": "ST",
+            "Saudi Arabia": "SA",
+            "Senegal": "SN",
+            "Serbia": "RS",
+            "Seychelles": "SC",
+            "Sierra Leone": "SL",
+            "Singapore": "SG",
+            "Slovakia": "SK",
+            "Slovenia": "SI",
+            "Solomon Islands": "SB",
+            "Somalia": "SO",
+            "South Africa": "ZA",
+            "South Sudan": "SS",
+            "Spain": "ES",
+            "Sri Lanka": "LK",
+            "Sudan": "SD",
+            "Suriname": "SR",
+            "Sweden": "SE",
+            "Switzerland": "CH",
+            "Syria": "SY",
+            "Taiwan": "TW",
+            "Tajikistan": "TJ",
+            "Tanzania": "TZ",
+            "Thailand": "TH",
+            "Timor-Leste": "TL",
+            "Togo": "TG",
+            "Tonga": "TO",
+            "Trinidad and Tobago": "TT",
+            "Tunisia": "TN",
+            "Turkey": "TR",
+            "Turkmenistan": "TM",
+            "Tuvalu": "TV",
+            "Uganda": "UG",
+            "Ukraine": "UA",
+            "United Arab Emirates": "AE",
+            "United Kingdom": "GB",
+            "United States of America": "US",
+            "Uruguay": "UY",
+            "Uzbekistan": "UZ",
+            "Vanuatu": "VU",
+            "Vatican City": "VA",
+            "Venezuela": "VE",
+            "Vietnam": "VN",
+            "Yemen": "YE",
+            "Zambia": "ZM",
+            "Zimbabwe": "ZW"
+        };
+                
+        // Initial definition 
+        
+        var headers = new Headers(),
+            api = API_BASE + "/",
+            defaultURL ="all";
+        headers.append('ngrok-skip-browser-warning', 'true'); // Add the custom header to skip the warning
+        
+
+        let mode = "Live", option = "All",
+            matchType = 'unknown', 
+            latStr, lonStr, 
+            mmsiStr, 
+            token, 
+            zoomstatus=false,
+            infostatus = false,
+            limitData = 500;
+        
+        // Element Definition   
+        const 
+            tokenContainer= document.getElementById('token-container'),
+            tokenForm= document.getElementById('token-form'),
+            tokenInput= document.getElementById('token-input'),
+            tokenDesc= document.getElementById('token-description')
+            tokenLoadingContainer= document.getElementById('token-loading-container'),
+            freeTrialButton= document.getElementById('free-trial-button'),
+            registerForm= document.getElementById('register-form'),
+            emailInput= document.getElementById('email-input'),
+            usernameInput= document.getElementById('username-input'),
+            emailDesc= document.getElementById('email-description'),
+            registerButton= document.getElementById('register-button'),
+            accountForm= document.getElementById('account-form'),
+            accountContent= document.getElementById('account-content'),
+            backButton= document.getElementById('back-button'),
+            copyToken= document.getElementById('copy-token'),
+            mapTopButton= document.getElementById('map-top-button'),
+            loadingContainer= document.getElementById('loading-container'),
+            searchInputForm= document.getElementById('search-input-form'),
+            searchInput= document.getElementById('search-input'),
+            userText= document.getElementById('user-text'),
+            statText= document.getElementById('stat-text'),
+            resultCount= document.getElementById('result-count'),
+            mapLayerButtons= document.querySelectorAll('.map-layer-button'),
+            streetMapButton= document.getElementById('street-map-button'),
+            liveButton= document.getElementById('live-button'),
+            historyButton= document.getElementById('history-button'),
+            resetButton= document.getElementById('reset-button'),
+            clearButton= document.getElementById("clear-button"),
+            sourceButtons = document.querySelectorAll('.source-button'),
+            allDataButton= document.getElementById('all-data-button'),
+            satelliteDataButton= document.getElementById('satellite-data-button'),
+            terrestrialDataButton= document.getElementById('terrestrial-data-button'),
+            dateTimeForm= document.getElementById('date-time-form'),
+            durationBar= document.getElementById('duration-bar'),
+            fromDate= document.getElementById('from-date'),
+            fromTime= document.getElementById('from-time'),
+            toTime= document.getElementById('to-time'),
+            toDate= document.getElementById('to-date'),
+            intervalButtons= document.querySelectorAll('#time-interval-buttons button'),
+            infoBox= document.getElementById('info-box'),
+            infoContent= document.getElementById('info-content'),
+            closeButton= document.getElementById('close-button');
+            const taskingButton = document.getElementById('taskingbtn');
+            // const infoBox2 = document.getElementById('info-box2');
+        
+        // need to be last in definition, initialize empty map    
+        let map = initializeMap(), currentMap = map;
+        
+        // Hide Element, add button that is active
+        setElementsDisplay([userText,statText,infoBox,durationBar,resultCount,tokenLoadingContainer],'none')
+        activateButtons('.top-button')
+        activateButtons('.mode-button')
+        setButtonActive([mapTopButton, liveButton, allDataButton].filter(Boolean));
+
+        let isDragging = false;
+
+        // When mouse is pressed on the map
+        const mapContainer = document.getElementById('map-container');
+
+        mapContainer.addEventListener('mousedown', () => {
+            isDragging = false; // reset on mouse down
+        });
+
+        mapContainer.addEventListener('mousemove', () => {
+            isDragging = true; // mouse moved → user is dragging
+        });
+
+        // Toggle duration bar when history button is clicked
+        historyButton.addEventListener('click', (e) => {
+            durationBar.style.display = durationBar.style.display === 'block' ? 'none' : 'block';
+            e.stopPropagation(); // prevent immediate close
+        });
+
+        // Close duration bar when clicking outside, but ignore drag
+        document.addEventListener('click', (event) => {
+            const isClickInside = durationBar.contains(event.target) || historyButton.contains(event.target);
+
+            if (!isClickInside && !isDragging) {
+                durationBar.style.display = 'none';
+            }
+        });
+
+        
+
+        // Logout functionality
+        document.getElementById('btnLogout').addEventListener('click', function() {
+            // Remove user information from local storage
+            sessionStorage.removeItem('email');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('firstname');
+            sessionStorage.removeItem('lastname');
+            sessionStorage.removeItem('organization');
+            sessionStorage.removeItem('timecreated');
+            sessionStorage.removeItem('timeexpiry');
+            sessionStorage.removeItem('package');
+
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'index.html';
+        });
+
+        // document.getElementById('btnPort').addEventListener('click', function() {
+        //     // Redirect to the logout page or perform other logout actions
+        //     window.location.href = 'port.html';
+        // });
+
+        // taskingButton.addEventListener('click', function() {
+        //     // Toggle visibility of info-box2
+        //     if (infoBox2.style.display === 'none' || infoBox2.style.display === '') {
+        //         infoBox2.style.display = 'block';  // Show the info box
+        //     } else {
+        //         infoBox2.style.display = 'none';   // Hide the info box
+        //     }
+        // });
+
+        document.getElementById('map-top-button').addEventListener('click', function() {
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'map.html';
+        });
+
+        document.getElementById('btnProfile').addEventListener('click', function() {
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'profile.html';
+        });
+
+        // 1️⃣ Check URL for token first
+        const params = new URLSearchParams(window.location.search);
+        const tokenFromUrl = params.get("token");
+
+        if (tokenFromUrl) {
+            sessionStorage.setItem("token", tokenFromUrl);
+        }
+
+        // 2️⃣ Use sessionStorage token (either from previous session or just set from URL)
+        let storedToken = sessionStorage.getItem('token');
+
+        // 🔴 Immediately redirect if no token
+        if (!storedToken) {
+            console.error('No token available in session storage, redirecting to login');
+            window.location.replace("index.html"); // more robust than href
+        }
+
+        // 3️⃣ If token exists, continue with fetch
+        headers.append('Authorization', `Bearer ${storedToken}`);
+        setElementsDisplay([tokenLoadingContainer], 'flex');
+
+        token = "token=" + storedToken;
+        let usernameurl = API_BASE + "/login?token=" + storedToken;
+
+        (async () => {
+            try {
+                console.log(`Stored Token: ${storedToken}`);
+                const responseuser = await fetch(usernameurl, { headers });
+
+                if (!responseuser.ok) {
+                    console.error('Unauthorized Token');
+                    tokenDesc.innerHTML = "Unauthorized Token";
+                    setElementsDisplay([tokenLoadingContainer], 'none');
+                    return;
+                }
+
+                const name = await responseuser.json();
+                console.log(`Response JSON: ${JSON.stringify(name)}`);
+                username = name.Username;
+
+                if (!username) {
+                    tokenDesc.innerHTML = "Unauthorized Token";
+                } else {
+                    setElementsDisplay([userText, tokenContainer], 'none');
+                    userText.innerHTML = username;
+                    URL = API_BASE + "/" + defaultURL;
+                    fetchData(URL);
+                }
+
+            } catch (error) {
+                console.error('There was a problem with the fetch operation:', error);
+            }
+
+            setElementsDisplay([tokenLoadingContainer], 'none');
+        })();
+
+        fromDate.value = "";
+        fromTime.value = "";
+        toDate.value = "";
+        toTime.value = "";
+                        
+        // Get the current date and time
+        const currentDate = new Date();
+        const currentDateString = currentDate.toISOString().split('T')[0]; // Get the date in YYYY-MM-DD format
+        const currentTimeString = currentDate.toTimeString().slice(0, 5); // Get the time in HH:MM format
+        const pastTime = new Date(currentDate);
+		pastTime.setHours(currentDate.getHours() - 1);
+		const fromTimeString = pastTime.toTimeString().slice(0, 5);
+		// Set the default values for "From Date" and "To Date"
+		fromDate.value = currentDateString;
+		fromTime.value = fromTimeString;
+		toTime.value = currentTimeString;
+		toDate.value = currentDateString;
+        
+        // ----------------------
+        // History Button Click
+        // ----------------------
+        historyButton.addEventListener('click', () => {
+            mode = "History";        // Activate history mode
+            limitData = 3000;
+            durationBar.style.display = 'block';
+            historyButton.classList.add("active");
+            liveButton.classList.remove("active");
+        });
+
+        // ----------------------
+        // Interval Buttons Click
+        // ----------------------
+
+        function formatLocalDate(date) {
+            return date.getFullYear() + "-" +
+                String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                String(date.getDate()).padStart(2, "0");
+        }
+
+        function formatLocalTime(date) {
+            return String(date.getHours()).padStart(2, "0") + ":" +
+                String(date.getMinutes()).padStart(2, "0");
+        }
+
+        function localToUTC(dateStr, timeStr) {
+            const local = new Date(`${dateStr}T${timeStr}:00`);
+            return local.toISOString().slice(0, 19);
+        }
+
+        
+        intervalButtons.forEach((button) => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();   // <<<< IMPORTANT
+
+                // Remove "active" class from all buttons
+                intervalButtons.forEach(btn => {
+                    if (btn instanceof HTMLElement) {
+                        btn.classList.remove("active");
+                    }
+                });
+
+                // Add "active" class to the clicked button
+                if (this instanceof HTMLElement) {
+                    this.classList.add("active");
+                }
+
+                // Calculate past date based on selected option
+                const selectedOption = this.id;
+                const pastDate = new Date();
+
+                switch (selectedOption) {
+                    case '30m': pastDate.setMinutes(currentDate.getMinutes() - 30); break;
+                    case '1h': pastDate.setHours(currentDate.getHours() - 1); break;
+                    case '3h': pastDate.setHours(currentDate.getHours() - 3); break;
+                    case '6h': pastDate.setHours(currentDate.getHours() - 6); break;
+                    case '12h': pastDate.setHours(currentDate.getHours() - 12); break;
+                    case '1d': pastDate.setDate(currentDate.getDate() - 1); break;
+                    case '5d': pastDate.setDate(currentDate.getDate() - 5); break;
+                    case '1w': pastDate.setDate(currentDate.getDate() - 7); break;
+                    case '2w': pastDate.setDate(currentDate.getDate() - 14); break;
+                    case '1m': pastDate.setMonth(currentDate.getMonth() - 1); break;
+                    case '3m': pastDate.setMonth(currentDate.getMonth() - 3); break;
+                    case '6m': pastDate.setMonth(currentDate.getMonth() - 6); break;
+                    case '1y': pastDate.setFullYear(currentDate.getFullYear() - 1); break;
+                }
+
+                fromDate.value = formatLocalDate(pastDate);
+                fromTime.value = formatLocalTime(pastDate);
+
+                // Turn off heatmap first
+                showHeat = false;
+                if (heatLayer) {
+                    map.removeLayer(heatLayer);
+                }
+
+                // Dispatch the form submit
+                if (mode === "History") {
+                    dateTimeForm.dispatchEvent(new Event('submit'));
+                }
+
+                // ✅ Re-add heatmap after a short delay if it was previously on
+                setTimeout(() => {
+                    if (showHeat && currentMap && currentMap.length > 0) {
+                        showHeatmap(currentMap);
+                    }
+                }, 200);
+            });
+        });
+
+
+
+
+        // ----------------------
+        // Date-Time Form Submission
+        // ----------------------
+        let isFetching = false;
+
+        dateTimeForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            if (mode !== "History" || isFetching) return;
+
+            isFetching = true;
+            try {
+                const fromISO = localToUTC(fromDate.value, fromTime.value);
+                const toISO   = new Date().toISOString().slice(0,19);
+
+                const durationUrl = `from_time=${fromISO}&to_time=${toISO}`;
+
+                let endpoint, params;
+
+                if (option === "MMSI") {
+                    endpoint = "get-by-mmsi/duration";
+                    params = `mmsi=${mmsiStr}&${durationUrl}`;
+                } else if (option === "Location") {
+                    endpoint = "get-by-coordinate/duration";
+                    params = `lat=${latStr}&lon=${lonStr}&${durationUrl}`;
+                } else {
+                    endpoint = "time";
+                    params = durationUrl;
+                }
+
+                URL = `${API_BASE}/${endpoint}?${params}`;
+
+                await fetchData(URL);
+
+            } catch (err) {
+                console.error('There was a problem with the fetch operation:', err);
+            } finally {
+                isFetching = false;
+            }
+        });
+
+
+        
+        // // When live button is clicked
+        // liveButton.addEventListener('click', () => {
+        //     limitData = 1000;
+        //     durationBar.style.display = 'none';
+        
+        //     if (mode !== "Live") {
+        //         durationBar.style.display = 'none';
+        //         if (option === "MMSI"){
+        //             liveMMSI(mmsiStr);
+        //         } else if (option === "Location"){
+        //             liveLoc(latStr,lonStr);
+        //         } else{
+        //             liveAll()
+        //         }
+        //     }
+        // });
+        
+
+        // resetButton.addEventListener('click', function() {
+        //     resetMap();
+        // });
+        
+        // When search input is submitted
+        searchInputForm.addEventListener('submit',async function(event) {
+            event.preventDefault(); // Prevent the form from submitting and refreshing the page
+            searchInputValue = searchInput.value;
+            setElementsDisplay([durationBar],'none');
+            historyButton.classList.remove("active");
+            // liveButton.classList.add("active");
+
+            // Define regular expressions as string keys and their corresponding types
+            const regexTypes = {
+              Coordinate: /-?[0-9]+(\.[0-9]{1,6})?,\s*-?[0-9]+(\.[0-9]{1,6})?/i, // Allow up to 6 decimal places and negative values
+              MMSI: /^\s*\d{9}\s*$/,
+              Location: /^[a-zA-Z0-9\s]+$/
+            };
+            
+            // Find the matching type
+            for (const key in regexTypes) {
+              const regex = regexTypes[key];
+              if (regex.test(searchInputValue)) {
+                matchType = key;
+                break; // Exit the loop once a match is found
+              }
+            }
+            
+            // Perform actions based on the detected input type
+            switch (matchType) {
+              case 'Coordinate':
+                 [latStr, lonStr] = searchInputValue.split(',').map((coord) => parseFloat(coord.trim()));
+                if (!isNaN(latStr) && !isNaN(lonStr)) {
+                   liveLoc(latStr,lonStr);
+                } else {
+                    console.log('Invalid coordinates in the input.');
+                }
+                break;
+
+              case 'MMSI':
+                    mmsiStr = searchInputValue;
+                    trackMMSI(mmsiStr); 
+              break;
+
+              case 'Location':
+                const lowercaseSearchInput = searchInputValue.toLowerCase();
+                // Define the Nominatim API endpoint
+                const nominatimApiUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(lowercaseSearchInput)}`;
+                fetch(nominatimApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const location = data[0]; // Assuming the first result
+                        const {lat,lon} = location;
+                        latStr = lat;
+                        lonStr = lon;
+                        liveLoc(latStr,lonStr);
+                    }else{
+                        liveAll();
+                    }
+                });
+                break;
+              default:
+                // Handle unknown input type
+                console.log('Unknown input type. Performing default action.');
+                break;
+            }
+
+        });
+        
+        // Add event listeners for map layer buttons
+        mapLayerButtons.forEach(mapButton => {
+            mapButton.addEventListener('click', function () {
+                mapLayerButtons.forEach(btn => btn.classList.remove('active'));
+                mapButton.classList.add('active');
+    
+                // Update the map layer here based on the button clicked
+                if (mapButton.id === 'street-map-button') {
+                    map.eachLayer(function (layer) {
+                        if (layer instanceof L.TileLayer) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: 'Map data &copy; OpenStreetMap contributors'
+                    }).addTo(map);
+                } else if (mapButton.id === 'satellite-map-button') {
+                    map.eachLayer(function (layer) {
+                        if (layer instanceof L.TileLayer) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                        maxZoom: 20,
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                        attribution: 'Satellite imagery &copy; Google'
+                    }).addTo(map);
+                } else if (mapButton.id === 'dark-matter-map-button') {
+                    map.eachLayer(function (layer) {
+                        if (layer instanceof L.TileLayer) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19,
+                        subdomains: 'abcd',
+                        attribution: 'Map data &copy; OpenStreetMap contributors, Imagery © CartoDB'
+                    }).addTo(map);
+                }
+            });
+        });
+
+        async function fetchMultiSourceData(urls) {
+            setElementsDisplay([loadingContainer],'flex');
+            aisData = [];
+
+            const headers = new Headers();
+            headers.append('ngrok-skip-browser-warning', 'true');
+
+            const storedToken = sessionStorage.getItem('token');
+            if (storedToken) {
+                headers.append('Authorization', `Bearer ${storedToken}`);
+            }
+
+            try {
+                const responses = await Promise.all(urls.map(url => fetch(url, { headers })));
+
+                const allData = await Promise.all(responses.map(res => {
+                    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+                    return res.json();
+                }));
+
+                // Merge all `data[1]` arrays from each API
+                aisData = allData.map(d => d[1]).flat();
+
+                if (!aisData || aisData.length === 0) {
+                    console.error('AIS data is not available or empty.');
+                    resultCount.innerHTML = "No matching result";
+                    setElementsDisplay([loadingContainer],'none');
+                    return;
+                }
+
+                // Use your existing logic from here:
+                const filteredData = aisData.filter(data => ['1', '2', '3', '4', '21', '18', '19'].includes(data.type));
+                const dataCount = filteredData.length;
+                const resultText = dataCount === 1 ? 'result' : 'results';
+                const countText = `Showing ${dataCount} ${resultText}`;
+                resultCount.style.display = 'none';
+                resultCount.innerHTML = countText;
+
+                // Setup source buttons logic
+                sourceButtons.forEach(sourceButton => {
+                    sourceButton.addEventListener('click', function () {
+                        sourceButtons.forEach(btn => btn.classList.remove('active'));
+                        sourceButton.classList.add('active');
+                        zoomstatus = true;
+                        removeMarkers(map);
+
+                        let sourceData = [];
+                        if (sourceButton.id === 'all-data-button') {
+                            filterData(aisData);
+                        } else if (sourceButton.id === 'satellite-data-button') {
+                            sourceData = aisData.filter(sdata => sdata.source === "1");
+                            filterData(sourceData);
+                        } else if (sourceButton.id === 'terrestrial-data-button') {
+                            sourceData = aisData.filter(sdata => sdata.source === "0");
+                            filterData(sourceData);
+                        }
+                    });
+                });
+
+                filterData(aisData);
+
+            } catch (error) {
+                console.error("Error fetching from multiple APIs:", error);
+                setElementsDisplay([loadingContainer],'none');
+            }
+        }
+
+        
+        // main function to fetch data from API
+        async function fetchData(URL) {
+            setElementsDisplay([loadingContainer],'flex')
+            try { const response = await fetch(URL, { 
+                    headers: headers
+                });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.error('Unauthorized token');
+                    } else if (response.status === 404) {
+                        console.error('Data is not available');
+                    } else if (response.status === 422) {
+                        console.error('Data is not available');
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                }
+                
+                const data = await response.json();
+                // assuming data.Decoded is the array of AIS messages
+                aisData = data.Decoded;
+
+                if (!aisData || aisData.length === 0) {
+                        console.error('AIS data is not available or empty.');
+                        resultCount.innerHTML = "No matching result";
+                        setElementsDisplay([loadingContainer],'none');
+                        return;
+                    } else{
+                        // Update the content of the info box with the count of results
+
+                        const filteredData = aisData.filter(data => ['1', '2', '3', '4', '21', '18', '19'].includes(data.type));
+                        const dataCount = filteredData.length;
+                        const resultText = dataCount === 1 ? 'result': 'results';
+                        const countText = `Showing ${dataCount} ${resultText}`;
+                        resultCount.style.display = 'none';
+                        resultCount.innerHTML = countText;
+                    }
+                
+                // Button to show different source of data 
+                sourceButtons.forEach(sourceButton => {
+                    sourceButton.addEventListener('click', function () {
+                        sourceButtons.forEach(btn => btn.classList.remove('active'));
+                        sourceButton.classList.add('active');
+                        
+                        zoomstatus = true;
+                        removeMarkers(map); 
+                        let sourceData =[]
+                        if (sourceButton.id === 'all-data-button'){
+                            filterData(aisData);
+                        } else if (sourceButton.id === 'satellite-data-button'){
+                            for (const sdata of aisData){
+                                if (sdata.source === "1"){
+                                    sourceData.push(sdata);
+                                }
+                            }
+                            filterData(sourceData);
+                        } else if (sourceButton.id === 'terrestrial-data-button'){
+                            for (const sdata of aisData){
+                                if (sdata.source === "0"){
+                                    sourceData.push(sdata);
+                                }
+                            }
+                            filterData(sourceData);
+                        }
+                    });
+                });
+                
+                filterData(aisData);
+                
+                // Function to filter the data that need to be show in one frame
+                function filterData(data){
+                    // function to eliminate the crowded marker based on their coordinates (closer, show less)
+                    function areCoordinatesClose(coord1, coord2, threshold) {
+                        const lat1 = parseFloat(coord1.lat);
+                        const lon1 = parseFloat(coord1.lon);
+                        const lat2 = parseFloat(coord2.lat);
+                        const lon2 = parseFloat(coord2.lon);
+                    
+                        if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
+                            const latDiff = Math.abs(lat1 - lat2);
+                            const lonDiff = Math.abs(lon1 - lon2);
+                            return latDiff <= threshold && lonDiff <= threshold;
+                        }
+                    
+                        // If any of the coordinates are invalid, consider them not close.
+                        return true;
+                    }
+                    
+                    // function to randomize the set of data to show only a number of the data (limit data) to minimize the crowded map
+                    function getRandomItemsFromArray(array, numberOfItems, threshold) {
+                        // Filter out coordinates that are close to others
+                        const filteredArray = [];
+                        for (const item of array) {
+                            if (filteredArray.every((filteredItem) => !areCoordinatesClose(item, filteredItem, threshold))) {
+                                filteredArray.push(item);
+                            }
+                        }
+                    
+                        // Shuffle the filtered array
+                        const shuffledArray = filteredArray.slice().sort(() => Math.random() - 0.5);
+                    
+                        // Return the first 'numberOfItems' items from the shuffled array
+                        return shuffledArray.slice(0, numberOfItems);
+                    }
+                    
+                    boundData(data);
+                    
+                    // function to check the data if it is within the frame map boundary
+                    function boundData(data){
+                        var zoomLevel = map.getZoom();
+                        var mapBounds = map.getBounds();
+                        let zoomData = [];
+                
+                        for (const zdata of data) {
+                            // Convert lat and lon strings to numbers
+                            const lat = parseFloat(zdata.lat);
+                            const lon = parseFloat(zdata.lon);
+                        
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                var targetLatLng = L.latLng(lat, lon);
+                        
+                                if (mapBounds.contains(targetLatLng)) {
+                                    // If the condition is true, append zdata to zoomData
+                                    zoomData.push(zdata);
+                                }
+                            } 
+                        }
+                        let range = null;
+						let mapData = null;
+                        removeMarkers(map);
+                        // if the number of data within boundary is more than limit data, do the randomized and location check
+                        if (zoomData.length>limitData){
+                            if (zoomLevel<=3){
+                                range = 1;  
+                            } else if (zoomLevel>=3 && zoomLevel<=5){
+                                range = 0.1;
+                            } else if (zoomLevel>=6 && zoomLevel<=8){
+                                range = 0.01;
+                            } else if (zoomLevel>=9){
+                                range = 0.001;
+                            }
+							mapData = getRandomItemsFromArray(zoomData, limitData, range)
+                            currentMap = markVessel(getRandomItemsFromArray(zoomData, limitData, range));
+                        }else {
+							mapData = zoomData;
+                            updateMapAfterFilter(mapData);
+                        }
+                        
+                        setElementsDisplay([statText],'block')
+                        statText.innerHTML= `Available Data: ${zoomData.length}`
+                        // statText.innerHTML= `Zoom Level: ${zoomLevel} | Map Bound | Data Available: ${zoomData.length} | Data Shown: ${mapData.length}`
+                        // statText.innerHTML= `Data Available: ${zoomData.length} | Data Shown: ${mapData.length}`
+                    }
+    
+                    // Add an event listener to log the zoom level when it changes
+                    map.on('zoomend moveend', function (event) {
+                        zoomstatus = true;
+                        boundData(data);
+                        if (infostatus === true){
+                            setElementsDisplay([infoBox],'block')
+                        }
+                    });
+                }    
+            } catch (error) {
+                console.error('There was a problem with the fetch operation:', error);
+            }
+        }
+        
+        // main function to mark the vessel on the map
+        function markVessel(data) {
+            // check for the first data point
+            const validMsgTypes = ['1','2','3','4','21','18','19'];
+            firstDataPoint = null;
+            aisData.forEach(item => {
+                if (validMsgTypes.includes(item.type)) {
+                    firstDataPoint = item;
+                    return; // Exit the loop after finding the first valid data point
+                } else {
+                    firstDataPoint = {"lat": "0","lon": "0"};
+                }
+            });
+            
+            // check for zoomstatus, different option have different initial view
+            if (zoomstatus === false){
+                if (option === "Location"){
+                    map.setView([latStr,lonStr],5);
+                } else if (option === "All"){
+                    map.setView([3.03,101.34],10);
+                } else if (option === "MMSI"){
+                    map.setView([firstDataPoint.lat, firstDataPoint.lon], 10);
+                }
+            }
+            
+            // set the icon to use custom design
+            const customIcon = L.divIcon({
+                className: 'custom-icon',
+                iconAnchor: [4, 8],
+                popupAnchor: [0, -8],
+                html: '<div class="triangle"></div>'
+            });
+                
+            const markers = []; // Create an array to store markers
+            
+            // loop to mark the vessel
+            data.forEach(item => {
+
+                // Skip static messages
+                if (item.type === '5' || item.type === '24') return;
+
+                // Validate position
+                if ('0' in item || !('lat' in item) || !('lon' in item)) return;
+                if (isNaN(item.lat) || isNaN(item.lon)) return;
+
+                const lat  = parseFloat(item.lat);
+                const lon  = parseFloat(item.lon);
+                const mmsi = item.mmsi;
+
+                // ✅ CORRECT COURSE HANDLING
+                let course = Number(item.cog ?? item.course);
+
+                if (!Number.isFinite(course) || course < 0 || course >= 360) {
+                    course = 0;          // AIS 511 / invalid → north fallback
+                }
+
+                const marker = L.marker([lat, lon], {
+                    icon: customIcon
+                }).addTo(map);
+
+                const triangleElement = marker.getElement().querySelector(".triangle");
+
+                let rotation = course + "deg";
+                let borderColor = "white";
+
+                // Message-type styling
+                if (item.type === 1) borderColor = "red";
+                else if (item.type === 2) borderColor = "pink";
+                else if (item.type === 3) borderColor = "green";
+                else if (item.type === 18) borderColor = "green";
+                else if (item.type === 19) borderColor = "lime";
+                else if (item.type === 21) {
+                    rotation = "0deg";
+                    borderColor = "yellow";
+
+                    // GPS base station style
+                    setElementStyles(
+                        triangleElement,
+                        ["width","height","border-right","border-left","border-bottom"],
+                        ["7px","7px","0","0","7px solid"]
+                    );
+                }
+                else if (item.type === 4) {
+                    rotation = "0deg";
+                    borderColor = "black";
+
+                    // GPS base station style
+                    setElementStyles(
+                        triangleElement,
+                        ["width","height","border-right","border-left","border-bottom"],
+                        ["7px","7px","0","0","7px solid"]
+                    );
+                }
+
+                // ✅ APPLY STYLE
+                setElementStyles(
+                    triangleElement,
+                    ["--rotation","border-bottom-color"],
+                    [rotation,borderColor]
+                );
+
+                // --------------------
+                // Popup name lookup
+                // --------------------
+
+                let popupContent = `<div>${mmsi}<br>`;
+                let iteminfo = null;
+                let shipName = null;
+
+                for (const info of data) {
+                    if (
+                        ((info.type === '5' || info.type === '24') && info.mmsi === mmsi)
+                        || (info.type === '19' && info.mmsi === mmsi)
+                    ) {
+                        iteminfo = info;
+                        shipName = info.shipname;
+                        popupContent += shipName ?? "";
+                        break;
+                    }
+                }
+
+                popupContent += '</div>';
+                marker.bindPopup(popupContent);
+
+                setElementsDisplay([infoBox], 'none');
+
+                // --------------------
+                // Ripple on click
+                // --------------------
+
+                let currentRipple = null;
+                let currentMarker = null;
+
+                marker.on('click', () => {
+
+                    showInfoBox(item, iteminfo);
+
+                    if (currentRipple) {
+                        currentRipple.remove();
+                    }
+
+                    const rippleCircle = document.createElement('div');
+                    rippleCircle.style.position = 'absolute';
+                    rippleCircle.style.width = '10px';
+                    rippleCircle.style.height = '10px';
+                    rippleCircle.style.backgroundColor = 'rgba(0, 0, 255, 0.3)';
+                    rippleCircle.style.borderRadius = '50%';
+                    rippleCircle.style.top = '-3px';
+                    rippleCircle.style.left = '-3px';
+                    rippleCircle.classList.add('pulse-animation');
+
+                    marker.getElement().appendChild(rippleCircle);
+
+                    currentRipple = rippleCircle;
+                    currentMarker = marker;
+
+                    setTimeout(() => {
+                        if (currentRipple) currentRipple.remove();
+                    }, 1500);
+                });
+
+                // --------------------
+                // Hover flag popup
+                // --------------------
+
+                triangleElement.addEventListener('mouseover', () => {
+
+                    const countryName = item.country;
+                    const countryCode = countryCodes[countryName] || "UN";
+
+                    const popupHtml = `
+                        <div style="text-align:center;">
+                            <img src="https://flagsapi.com/${countryCode}/shiny/32.png"
+                                style="display:block;margin:0 auto 5px;"
+                                alt="${countryName} Flag">
+                            <strong>MMSI:</strong> ${mmsi}
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupHtml).openPopup();
+                    console.log(item.country, countryCodes[item.country]);
+                });
+
+                triangleElement.addEventListener('mouseout', () => {
+                    marker.closePopup();
+                });
+
+                markers.push(marker);
+
+            });
+
+
+
+            // Define variables to store the last item and its corresponding iteminfo
+            let lastItem = null;
+            let lastItemInfo = null;
+
+            aisData.forEach(item => {
+                if ((item.type === '1' || item.type === '2' || item.type === '3' || item.type === '4' || item.type === '18' || item.type === '19' || item.type === '21') && !('0' in item) && 'lat' in item && 'lon' in item && !isNaN(item.lat) && !isNaN(item.lon)) {
+                    lastItem = item;
+                }
+
+                if ((item.type === '5' || item.type === '24' )) {
+                    lastItemInfo = item;
+                }
+            });
+
+            // Now, outside the loop, you can use the lastItem and lastItemInfo as needed based on the 'option'
+            if (option === "MMSI" && lastItem !== null) {
+                showInfoBox(lastItem, lastItemInfo);
+                const lastMarker = markers.find(marker => marker.getLatLng().equals([parseFloat(lastItem.lat), parseFloat(lastItem.lon)]));
+                if (lastMarker) {
+                    lastMarker.openPopup();
+                }
+            }
+
+            // Adjust map view on window resize
+            window.addEventListener('resize',() => map.invalidateSize());
+            setElementsDisplay([loadingContainer],'none');
+            return map;
+        }
+        
+        // function to show the info box data and to close it
+        function showInfoBox(markerData,markerInfo) {
+            // userText.style.display = 'none';
+            infoBox.style.display = 'block';
+            infostatus = true
+            if (mode === "Live"){
+                resultCount.style.display = 'none';
+            } else {
+                resultCount.style.display = 'none';
+            }
+            
+            // Update info box content
+            const formattedContent = generateInfoBoxContent(markerData,markerInfo);
+            infoContent.innerHTML = formattedContent;
+            // Add event listener to the close button
+            closeButton.addEventListener('click',() => {
+                infostatus = false;
+                infoBox.style.display = 'none';
+                resultCount.style.display = 'none';
+                userText.style.display = 'none';
+                if (option==="MMSI"){resetMap()}
+            });
+        }
+        // dictionary for message type (may not be used in the future)
+        var type_dict = {
+            "1": "Position Report Class A", "2": "Position Report Class A (Assigned schedule)", "3": "Position Report Class A (Response to interrogation)", "4": "Base Station Report", 
+            "5": "Static and Voyage Related Data", "6": "Binary Addressed Message", "7": "Binary Acknowledge", "8": "Binary Broadcast Message", 
+            "9": "Standard SAR Aircraft Position Report", "10": "UTC and Date Inquiry", "11": "UTC and Date Response", "12": "Addressed Safety Related Message", 
+            "13": "Safety Related Acknowledgement", "14": "Safety Related Broadcast Message", "15": "Interrogation", "16": "Assignment Mode Command", 
+            "17": "DGNSS Binary Broadcast Message", "18": "Standard Class B CS Position Report", "19": "Extended Class B Equipment Position Report", "20": "Data Link Management", 
+            "21": "Aid-to-Navigation Report", "22": "Channel Management", "23": "Group Assignment Command", "24": "Static Data Report", 
+            "25": "Single Slot Binary Message", "26": "Multiple Slot Binary Message With Communications State", "27": "Position Report For Long-Range Applications"
+        };
+        
+        // dictionary for navigation status
+        var status_dict = {
+            "0": "Under way using engine", "1": "At anchor", "2": "Not under command", "3": "Restricted maneuverability",
+            "4": "Constrained by her draught", "5": "Moored", "6": "Aground", "7": "Engaged in Fishing", "8": "Under way sailing",
+            "9": "Reserved for future amendment of Navigational Status for HSC", "10": "Reserved for future amendment of Navigational Status for WIG",
+            "11": "Power-driven vessel towing astern (regional use)", "12": "Power-driven vessel pushing ahead or towing alongside (regional use)",
+            "13": "Reserved for future use","14": "AIS-SART is active", "15": "Undefined (default)"
+        };
+        
+        // function to get the ship type
+        function getShipType(shiptype) {
+            const i = parseInt(shiptype)
+            if (i === 0) return "Unavailable";
+            if (i === 1 || (i >= 20 && i <= 24) || (i >= 30 && i <= 37)) return "Reserved for future use";
+            if (i === 25 || (i >= 45 && i <= 49) || (i >= 65 && i <= 69) || (i >= 75 && i <= 79) || (i >= 85 && i <= 89) || (i >= 95 && i <= 99)) return "Reserved for future use";
+            if (i === 20) return "Wing in ground (WIG) - All ship of this type";
+            if (i >= 21 && i <= 24) return `Wing in ground (WIG) - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            if (i === 30) return "Fishing";
+            if (i === 31) return "Towing";
+            if (i === 32) return "Towing Length exceeds 200m/Breadth exceeds 25m";
+            if (i === 33) return "Dredging or underwater ops";
+            if (i === 34) return "Diving Ops";
+            if (i === 35) return "Military Ops";
+            if (i === 36) return "Sailing";
+            if (i === 37) return "Pleasure Craft";
+            if (i === 40) return "High Speed Craft (HSC) - All ship of this type";
+            if (i >= 41 && i <= 44) return `High Speed Craft (HSC) - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            if (i === 50) return "Pilot Vessel";
+            if (i === 51) return "Search and Rescue vessel";
+            if (i === 52) return "Tug";
+            if (i === 53) return "Port Tender";
+            if (i === 54) return "Anti-pollution equipment";
+            if (i === 55) return "Law Enforcement";
+            if (i === 56 || i === 57) return "Spare - Local Vessel";
+            if (i === 58) return "Medical Transport";
+            if (i === 59) return "Noncombatant ship according to RR Resolution No. 18";
+            if (i === 60) return "Passenger - All ship of this type";
+            if (i >= 61 && i <= 64) return `Passenger - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            if (i === 70) return "Cargo - All ship of this type";
+            if (i >= 71 && i <= 74) return `Cargo - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            if (i === 80) return "Tankers - All ship of this type";
+            if (i >= 81 && i <= 84) return `Tankers - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            if (i === 90) return "Other Type - All ship of this type";
+            if (i >= 91 && i <= 94) return `Other Type - Hazardous CAT ${String.fromCharCode(64 + i)}`;
+            return "Other Type - No additional information";
+        }
+        
+        var maneuver_dict = {
+            '0': "0 - Unavailable",
+            '1': "1 - No special maneuver",
+            '2': "2 - Special maneuver"
+        };
+        
+        var epfd_dict = {
+            "0": "Undefined (default)",
+            "1": "GPS",
+            "2": "GLONASS",
+            "3": "Combined GPS/GLONASS",
+            "4": "Loran-C",
+            "5": "Chayka",
+            "6": "Integrated navigation system",
+            "7": "Surveyed",
+            "8": "Galileo",
+            "9": "Reserved",
+            "10": "Reserved",
+            "11": "Reserved",
+            "12": "Reserved",
+            "13": "Reserved",
+            "14": "Reserved",
+            "15": "Internal GNSS"
+        };
+    
+        function getTimestamp(sec){
+            const secValue = parseInt(sec)
+            if (isNaN(secValue)) return 'Invalid';
+            return secValue === 60 ? "60 - Time stamp not available" :
+                    secValue === 61 ? "61 - Positioning in manual input mode" :
+                    secValue === 62 ? "62 - Electronic Position Fixing System operates in estimated mode" :
+                    secValue === 63 ? "63 - Positioning system is inoperative":
+                    `${secValue}s`;
+        }
+        
+        // function to get the rate of turn
+        function getROT(turn){
+            const turnValue = parseFloat(turn);
+            if (isNaN(turnValue)) return 'Invalid';
+            return turnValue === 128 ? '128 - Data unavailable' :
+                   turnValue === 127 ? 'Right: >5°/30s' :
+                   turnValue === -127 ? 'Left: >5°/30s' :
+                   turnValue === 0 ? '0 - Not Turning' :
+                   turnValue > 0 ? `Right: ${turnValue}°/min` :
+                   turnValue < 0 ? `Left: ${Math.abs(turnValue)}°/min` :
+                   'Invalid';
+        }
+        
+        // function to generate position info for the vessel (may be change in future)
+        function generateInfoBoxContent(data,info) {
+            
+            let content = "<div style='text-align: center; color: white; padding: 0px;'>";
+
+            const countryName = data.country;
+            const countryCode = countryCodes[countryName] || "UN"; // fallback to UN for unknowns
+
+            // Add country flag image before MMSI
+            content += `
+                <img src="https://flagsapi.com/${countryCode}/flat/32.png" 
+                    alt="Flag of ${countryName}" 
+                    style="margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;"/>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: -5px;">
+                    <h3 style='margin: 0;'><span id="mmsiValue" style="user-select: text;">${data.mmsi}</span></h3>
+                    <button onclick="copyToClipboard2('${data.mmsi}')" title="Copy MMSI" style="cursor: pointer; font-size: 14px;">📋</button>
+                </div>
+            </div>`;
+
+            // Parse the datetime string from API
+            const messageTime = new Date(data.datetime + 'Z'); // Add 'Z' to treat as UTC
+            const now = new Date();
+            const diffMs = now - messageTime; // difference in milliseconds
+
+            // Convert to human-readable
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            let timeAgo = "";
+            if (diffSeconds < 60) {
+                timeAgo = `${diffSeconds} seconds ago`;
+            } else if (diffMinutes < 60) {
+                timeAgo = `${diffMinutes} minutes ago`;
+            } else if (diffHours < 24) {
+                timeAgo = `${diffHours} hours ago`;
+            } else {
+                timeAgo = `${diffDays} days ago`;
+            }
+            
+            content += "<table class='info-table'>";
+    
+            // Common fields for different message types
+            content += "<tr><td colspan='3' style='background-color: white; color: black; padding: 5px; text-align: center; font-weight: bold;'>SHIP</td></tr>";
+            content += `<tr><td>Message Type</td><td>:</td><td>${data.type} - ${type_dict[data.type]}</td></tr>`;
+            content += "<tr><td>UTC Time</td><td>:</td><td>" + data.datetime + " (" + timeAgo + ")</td></tr>";
+            content += "<tr><td>Radio Channel</td><td>:</td><td>" + data.channel + "</td></tr>";
+            content += "<tr><td>Country</td><td>:</td><td>" + data.country + "</td></tr>";
+    
+    
+            // Additional fields based on message type
+            if (String(data.type) === '1' || String(data.type) === '2' || String(data.type) === '3'){
+                content += "<tr><td colspan='3' style='background-color: white; color: black; padding: 5px; text-align: center; font-weight: bold;'>VOYAGE</td></tr>";
+                content += `<tr><td>Navigation Status</td><td>:</td><td>${data.status} - ${status_dict[data.status]}</td></tr>`;
+                content += "<tr><td>Rate of Turn (ROT)</td><td>:</td><td>" + getROT(data.turn) + "</td></tr>";
+                content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + data.speed + (data.speed === '1022' ? ' - ≥102.2knots': data.speed === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
+                // content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
+                content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
+                content += "<tr><td>Longitude</td><td>:</td><td>" + data.lon + "</td></tr>";
+                content += "<tr><td>Course over Ground (COG)</td><td>:</td><td>" + data.course + (data.course === '3600' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>True Heading (HDG)</td><td>:</td><td>" + data.heading + (data.heading === '511' ? '' : "°") + "</td></tr>";
+                // content += "<tr><td>Time Stamp</td><td>:</td><td>" + getTimestamp(data.second) + "</td></tr>";
+                // content += `<tr><td>Special Maneuver</td><td>:</td><td>${maneuver_dict[data.maneuver]}</td></tr>`;
+                // content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
+                // content += "<tr><td>Communication Status</td><td>:</td><td>" + data.radio + "</td></tr>";
+            } else if (data.type === '18') {
+                content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + data.speed + (data.speed === '1022' ? ' - ≥102.2knots': data.speed === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
+                content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
+                content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
+                content += "<tr><td>Longitude</td><td>:</td><td>" + data.lon + "</td></tr>";
+                content += "<tr><td>Course over Ground (COG)</td><td>:</td><td>" + data.course + (data.course === '3600' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>True Heading (HDG)</td><td>:</td><td>" + data.heading + (data.heading === '511' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>Time Stamp</td><td>:</td><td>" + getTimestamp(data.second) + "</td></tr>";
+                content += "<tr><td>CS Unit</td><td>:</td><td>" + data.cs + (data.cs === '0' ? ' - Class B SOTDMA':' - Class B CS Unit') + "</td></tr>";
+                content += "<tr><td>Display Flag</td><td>:</td><td>" + data.display + (data.display === '0' ? ' - No ' : ' - Has ') + "display</td></tr>";
+                content += "<tr><td>DSC Flag</td><td>:</td><td>" + data.dsc + (data.dsc === '0' ? ' - No ':' - Has ') +  "VHF radio + DSC capability</td></tr>";
+                content += "<tr><td>Band Flag</td><td>:</td><td>" + data.band + (data.band === '0' ? ' - Cannot ': ' - Can ') + "use any marine channel</td></tr>";
+                content += "<tr><td>Message 22 Flag</td><td>:</td><td>" + data.msg22 + (data.msg22 === '0' ? ' - Cannot ': ' - Can ') + "accept Message Type 22</td></tr>";
+                content += "<tr><td>Assigned</td><td>:</td><td>" + data.assigned + (data.assigned === '0' ? ' - Autonomous ': ' - Assigned ') + "mode</td></tr>";
+                content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
+                content += "<tr><td>Communication Status</td><td>:</td><td>" + data.radio + "</td></tr>";
+            } else if (data.type === '19') {
+                content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + data.speed + (data.speed === '1022' ? ' - ≥102.2knots': data.speed === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
+                content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
+                content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
+                content += "<tr><td>Longitude</td><td>:</td><td>" + data.lon + "</td></tr>";
+                content += "<tr><td>Course over Ground (COG)</td><td>:</td><td>" + data.course + (data.course === '3600' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>True Heading (HDG)</td><td>:</td><td>" + data.heading + (data.heading === '511' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>Time Stamp</td><td>:</td><td>" + getTimestamp(data.second) + "</td></tr>";
+                content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
+                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+                content += "<tr><td>Dimension</td></tr>";
+                content += "<tr><td>To Bow</td><td>:</td><td>" + data.to_bow + "m</td></tr>";
+                content += "<tr><td>To Stern</td><td>:</td><td>" + data.to_stern + "m</td></tr>";
+                content += "<tr><td>To Port</td><td>:</td><td>" + data.to_port + "m</td></tr>";
+                content += "<tr><td>To Starboard</td><td>:</td><td>" + data.to_starboard + "m</td></tr>";
+                content += `<tr><td>Position Fix Type</td><td>:</td><td>${data.epfd} - ${epfd_dict[data.epfd]}</td></tr>`;
+                content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
+                content += "<tr><td>Data Terminal Equipment</td><td>:</td><td>" + data.dte + (data.dte === '0' ? ' - Ready': ' - Not Ready') + "</td></tr>";
+                content += "<tr><td>Assigned</td><td>:</td><td>" + data.assigned + (data.assigned === '0' ? ' - Autonomous ': ' - Assigned ') + "mode</td></tr>";
+            } else if (data.type === '21') {
+
+            content += "<tr><td>AtoN Type</td><td>:</td><td>" + data.aid_type + "</td></tr>";
+            content += "<tr><td>AtoN Name</td><td>:</td><td>" + (data.name ? data.name.trim() : 'N/A') + "</td></tr>";
+            content += "<tr><td>Off-position Flag</td><td>:</td><td>" + 
+                    data.off_position + (data.off_position === 0 ? ' - On position' : ' - Off position') + "</td></tr>";
+            content += "<tr><td>Virtual AtoN</td><td>:</td><td>" + 
+                    data.virtual_aid + (data.virtual_aid === 0 ? ' - Physical AtoN' : ' - Virtual AtoN') + "</td></tr>";
+
+            } else if (data.type === '4') {
+                content += "<tr><td>Base Station Time (UTC)</td><td>:</td><td>" + formatTime(data.year, data.month, data.day, data.hour, data.minute, data.second) + "</td></tr>";
+                content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
+                content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
+                content += "<tr><td>Longitude</td><td>:</td><td>" + data.lon + "</td></tr>";
+                content += `<tr><td>Position Fix Type</td><td>:</td><td>${data.epfd} - ${epfd_dict[data.epfd]}</td></tr>`;
+                content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
+                content += "<tr><td>Communication Status</td><td>:</td><td>" + data.radio + "</td></tr>";
+            } else {
+                content += "<tr><td colspan='3'>Unknown Message Type</td></tr>";
+            }
+    
+            if (info !== null) {
+                content += generateAdditionalInfoBoxContent(info);
+            }
+            content += "</table>";
+    
+            return content;
+        }
+        
+        // function to show static data of vessel (may be change)
+        function generateAdditionalInfoBoxContent(data) {
+            let content = "<tr><td colspan='3'><hr class='connected-line'></td></tr>";
+            content += `<tr><td>Message Type</td><td>:</td><td>${data.type} - ${type_dict[data.type]}</td></tr>`;
+            content += "<tr><td>UTC Time</td><td>:</td><td>" + data.datetime + "</td></tr>";
+            content += "<tr><td>Radio Channel</td><td>:</td><td>" + data.channel + "</td></tr>";
+    
+            if (data.type === '5') {
+                //content += "<tr><td></td><td>:</td><td>" + data. + "</td></tr>";
+                content += "<tr><td>AIS Version</td><td>:</td><td>" + data.ais_version + (data.ais_version === '0' ? ' - ITU1371': ` - AIS Future editions`) + "</td></tr>";
+                content += "<tr><td>IMO Number</td><td>:</td><td>" + data.imo + "</td></tr>";
+                content += "<tr><td>Call Sign</td><td>:</td><td>" + data.callsign + "</td></tr>";
+                content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
+                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+                content += "<tr><td>Dimension</td></tr>";
+                let length = data.to_bow + data.to_stern
+                let width = data.to_port + data.to_starboard
+                //content += "<tr><td>Length</td><td>:</td><td>" + length + "</td></tr>";
+                //content += "<tr><td></td><td>:</td><td>" + width + "</td></tr>";
+                content += "<tr><td>To Bow</td><td>:</td><td>" + data.to_bow + "m</td></tr>";
+                content += "<tr><td>To Stern</td><td>:</td><td>" + data.to_stern + "m</td></tr>";
+                content += "<tr><td>To Port</td><td>:</td><td>" + data.to_port + "m</td></tr>";
+                content += "<tr><td>To Starboard</td><td>:</td><td>" + data.to_starboard + "m</td></tr>";
+                content += `<tr><td>Position Fix Type</td><td>:</td><td>${data.epfd} - ${epfd_dict[data.epfd]}</td></tr>`;
+                if (data.datetime && data.datetime.length >= 4 && data.month && data.day && data.hour && data.minute) {
+                    ETAtime = formatTime(data.datetime.substring(0, 4), data.month, data.day, data.hour, data.minute, '00');
+                } else{
+                    ETAtime = "undefined"
+                }
+                content += "<tr><td>ETA Time (UTC)</td><td>:</td><td>" + ETAtime + "</td></tr>";
+                content += "<tr><td>Draught </td><td>:</td><td>" + data.draught + "m</td></tr>";
+                content += "<tr><td>Destination</td><td>:</td><td>" + data.destination + "</td></tr>";
+                content += "<tr><td>Data Terminal Equipment</td><td>:</td><td>" + data.dte + (data.dte === '0' ? ' - Ready': ' - Not Ready') + "</td></tr>";
+            } else if (data.type === '24') {
+                if (data.partno === 'A') {
+                    content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
+                } else if (data.partno === 'B') {
+                    content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+                    content += "<tr><td>Vendor ID</td><td>:</td><td>" + data.vendorid + "</td></tr>";
+                    content += "<tr><td>Unit Model code</td><td>:</td><td>" + data.model + "</td></tr>";
+                    content += "<tr><td>Serial Number</td><td>:</td><td>" + data.serial + "</td></tr>";
+                    content += "<tr><td>Call Sign</td><td>:</td><td>" + data.callsign + "</td></tr>";
+                    if (data.mmsi.substring(0, 2) === '98') {
+                        content += "<tr><td>Dimension</td></tr>";
+                        content += "<tr><td>To Bow</td><td>:</td><td>" + data.to_bow + "m</td></tr>";
+                        content += "<tr><td>To Stern</td><td>:</td><td>" + data.to_stern + "m</td></tr>";
+                        content += "<tr><td>To Port</td><td>:</td><td>" + data.to_port + "m</td></tr>";
+                        content += "<tr><td>To Starboard</td><td>:</td><td>" + data.to_starboard + "m</td></tr>";
+                    } else {
+                        content += "<tr><td>Mothership MMSI</td><td>:</td><td>" + data.mothership_mmsi + "</td></tr>";
+                    }
+    
+                }
+            } else {}
+            return content;
+        }
+    
+        // function to format time to YYYY-MM-DD
+        function formatTime(year, month, day, hour, minute, second) {
+            const formattedTime = `${year}-${padZero(month)}-${padZero(day)} ${padZero(hour)}:${padZero(minute)}:${padZero(second)}`;
+            return formattedTime;
+        }
+
+        function padZero(value) {
+            return ('0' + value).slice(-2);
+        }
+        
+        // function to set multiple elements to show or hide
+        function setElementsDisplay(elements, styleValue) {
+          elements.forEach(function(element) {
+            element.style.display = styleValue;
+          });
+        }
+        
+        // function to change multiple property of an element
+        function setElementStyles(element, propertyNames, propertyValues) {
+          if (
+            element instanceof HTMLElement &&
+            Array.isArray(propertyNames) &&
+            Array.isArray(propertyValues) &&
+            propertyNames.length === propertyValues.length
+          ) {
+            propertyNames.forEach((property, index) => {
+              element.style.setProperty(property, propertyValues[index]);
+            });
+          } else {
+            console.error("Invalid input parameters.");
+          }
+        }
+        
+        function setButtonActive(elements) {
+          elements.forEach(function (element) {
+            element.classList.add("active");
+          });
+        }
+        
+        function removeButtonActive(elements) {
+          elements.forEach(function (element) {
+            element.classList.remove("active");
+          });
+        }
+        
+        // function to clear marker from the map layer
+        function removeMarkers(map) {
+            map.eachLayer((layer) => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+        
+        // function to initialize the map 
+        function initializeMap(){
+
+            var mapContainer = document.getElementById('map-container');
+
+            var map = L.map(mapContainer, {
+                zoomControl: false // disable default top-left control
+            });
+
+            // Add zoom control at bottom-right
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
+
+            // Create a div to show coordinates
+            const coordsDiv = L.control({ position: 'bottomright' });
+
+            coordsDiv.onAdd = function(map) {
+                this._div = L.DomUtil.create('div', 'coords');
+                this.update();
+                return this._div;
+            };
+
+            coordsDiv.update = function(latlng) {
+                this._div.innerHTML = latlng 
+                    ? `(${latlng.lat.toFixed(5)},${latlng.lng.toFixed(5)})`
+                    : 'Move mouse over map';
+            };
+
+            coordsDiv.addTo(map);
+
+            // Update coordinates on mouse move
+            map.on('mousemove', function(e) {
+                coordsDiv.update(e.latlng);
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            streetMapButton.classList.add("active");
+
+            map.setView([0, 0], 2);
+
+            // ✅ TRIANGLE SCALING BASED ON ZOOM
+            function updateTriangleScale() {
+
+                const zoom = map.getZoom();
+
+                const minZoom  = 2;
+                const maxZoom  = 12;
+
+                const minScale = 0.4;
+                const maxScale = 1;
+
+                // Clamp zoom range
+                const z = Math.min(Math.max(zoom, minZoom), maxZoom);
+
+                // Linear scale interpolation
+                const scale =
+                    minScale +
+                    ((z - minZoom) * (maxScale - minScale)) /
+                    (maxZoom - minZoom);
+
+                // Apply to all triangles via CSS var
+                document.documentElement.style.setProperty('--scale', scale);
+            }
+
+            // Bind zoom scaling
+            map.on('zoomend', updateTriangleScale);
+
+            // Initial scale set
+            updateTriangleScale();
+
+            return map;
+        }
+
+        
+        function activateButtons(selector) {
+            const buttons = document.querySelectorAll(selector);
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                });
+            });
+        }
+        
+        // function to show all live data
+        function liveAll () {
+            defaultURL = "all";
+            mode = "Live";
+            option = "All";
+
+            const baseApis = [
+                API_BASE + "/"
+            ];
+
+            const urls = baseApis.map(base => base + defaultURL);
+            fetchMultiSourceData(urls);
+        }
+
+        document.getElementById("left-button").addEventListener("click", function() {
+            var mmsi = document.getElementById("mmsiValue").innerText; // Get the MMSI value from the dynamically generated content
+            trackMMSI(mmsi); // Call the trackMMSI function with the MMSI value
+        });
+        
+        function trackMMSI(mmsi) {
+            const MMSIURL = "mmsi?mmsi=" + mmsi;
+            const URL = API_BASE + "/" + MMSIURL;
+            mode = "Live";
+            option = "MMSI";
+            zoomstatus = true;
+            fetchData(URL); 
+        }
+
+        function liveLoc(lat,lon) {
+            mode = "Live", option = "Location";
+            const areaURL = `coordinate?lat=${lat}&lon=${lon}&`;
+            URL = api + areaURL;
+            zoomstatus = false;
+            fetchData(URL);
+        }
+
+
+        // Vessel Class buttons
+        document.getElementById("vessel-class-a").addEventListener("click", () => {
+            setVesselClassURL("A");
+        });
+
+        document.getElementById("vessel-class-b").addEventListener("click", () => {
+            setVesselClassURL("B");
+        });
+
+        document.getElementById("vessel-class-all").addEventListener("click", () => {
+            setVesselClassURL("all");
+        });
+
+        // Set the global URL and call fetchData
+        function setVesselClassURL(vClass) {
+            if (vClass === "all") {
+                URL = API_BASE + "/all";
+            } else {
+                URL = `${API_BASE}/class?vessel_class=${vClass}`;
+            }
+
+            mode = "Live";       // optional: set mode if needed
+            option = "Class";    // optional: track that this is a class filter
+            zoomstatus = false;  // optional: adjust map zoom behavior
+            fetchData(URL);      // use your existing fetchData
+        }
+
+
+        
+        // function used to reset map (used a lot)
+        function resetMap(){
+            limitData = 3000;
+            event.preventDefault();
+            durationBar.style.display = 'none';
+            historyButton.classList.remove("active");
+            satelliteDataButton.classList.remove("active");
+            terrestrialDataButton.classList.remove("active");
+            liveButton.classList.add("active");
+            allDataButton.classList.add("active");
+            infostatus = false;
+            zoomstatus = false;
+            searchInput.value = "";
+            liveAll();
+        };
+        
+        // function to show account information in login page
+        function showAccountInfo (account){
+            setElementsDisplay([tokenForm],'flex')
+
+            const timeExpiry = new Date(account.time_expiry);
+            const timeDifferenceMs = timeExpiry - currentDate;
+            let timeLeft
+
+            // Check if the time has not already expired
+            if (timeDifferenceMs > 0) {
+                // Calculate days, hours, and minutes left
+                const daysLeft = Math.floor(timeDifferenceMs / (1000 * 60 * 60 * 24));
+                const hoursLeft = Math.floor((timeDifferenceMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutesLeft = Math.floor((timeDifferenceMs % (1000 * 60 * 60)) / (1000 * 60));
+                
+                timeLeft = `Expire in ${daysLeft}d ${hoursLeft}h ${minutesLeft}m`
+            } else {
+                timeLeft = "Expired";
+            }
+            let accountInfoContent = "<table class='account-info-table'>";
+            accountInfoContent += `<tr><td>Authorization Token</td><td>:</td><td>${account.auth_token}</td></tr>`;
+            accountInfoContent += `<tr><td>E-mail</td><td>:</td><td>${account.email}</td></tr>`;
+            accountInfoContent += `<tr><td>Username</td><td>:</td><td>${account.username}</td></tr>`;
+            accountInfoContent += `<tr><td>Valid Until</td><td>:</td><td>${account.time_expiry} (${timeLeft})</td></tr>`;
+            accountInfoContent += "</table>";
+            
+            accountContent.innerHTML = accountInfoContent;
+        }
+
+        //function to copy text to clipboard
+        function copyToClipboard(textToCopy) {
+            // Create a temporary input element to copy the text
+            var tempInput = document.createElement("input");
+            tempInput.value = textToCopy;
+
+            // Append the input element to the document
+            document.body.appendChild(tempInput);
+
+            // Select the text inside the input element
+            tempInput.select();
+
+            // Copy the selected text to the clipboard
+            document.execCommand("copy");
+
+            // Remove the temporary input element
+            document.body.removeChild(tempInput);
+
+            // Optionally, provide user feedback (e.g., an alert)
+            alert("Token copied to clipboard: " + textToCopy);
+        }
+
+
+        const layerIcon = document.getElementById('layer-icon');
+        const rightPopupLayers = document.getElementById('right-popup-layers');
+
+        const filterIcon = document.getElementById('filter-icon');
+        const rightPopupFilter = document.getElementById('right-popup-filter');
+
+        layerIcon.addEventListener('click', () => {
+            // Hide the filter popup if it's open
+            if (rightPopupFilter.style.display === 'block') {
+                rightPopupFilter.style.display = 'none';
+            }
+
+            // Toggle the layers popup visibility
+            if (rightPopupLayers.style.display === 'none' || rightPopupLayers.style.display === '') {
+                rightPopupLayers.style.display = 'block';
+            } else {
+                rightPopupLayers.style.display = 'none';
+            }
+        });
+
+        filterIcon.addEventListener('click', () => {
+            // Hide the layers popup if it's open
+            if (rightPopupLayers.style.display === 'block') {
+                rightPopupLayers.style.display = 'none';
+            }
+
+            // Toggle the filter popup visibility
+            if (rightPopupFilter.style.display === 'none' || rightPopupFilter.style.display === '') {
+                rightPopupFilter.style.display = 'block';
+            } else {
+                rightPopupFilter.style.display = 'none';
+            }
+        });
+
+
+
+
+        let showHeat = false;
+        let heatLayer = null;
+
+        function generateHeatmapData(aisArray) {
+            return aisArray
+                .filter(d => d.lat && d.lon && !isNaN(d.lat) && !isNaN(d.lon))
+                .map(d => [parseFloat(d.lat), parseFloat(d.lon), 1]); // intensity = 1
+        }
+
+        function showHeatmap(aisArray) {
+            const heatData = generateHeatmapData(aisArray);
+
+            // Remove previous heatmap
+            if (heatLayer) {
+                map.removeLayer(heatLayer);
+            }
+
+            heatLayer = L.heatLayer(heatData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 17,
+                gradient: {0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}
+            }).addTo(map);
+        }
+
+        // Toggle heatmap button
+        document.getElementById('toggleHeatmapBtn').addEventListener('click', () => {
+            showHeat = !showHeat;
+
+            if (showHeat) {
+                showHeatmap(currentMap);
+            } else {
+                if (heatLayer) map.removeLayer(heatLayer);
+                markVessel(currentMap);
+            }
+        });
+
+        // === THIS IS THE KEY PART ===
+        // Whenever your time filter updates currentMap, call this:
+        function updateMapAfterFilter(newFilteredData) {
+            currentMap = newFilteredData; // update global
+            if (showHeat) {
+                showHeatmap(currentMap);
+            } else {
+                markVessel(currentMap);
+            }
+        }
+
+
+
+        
+    });  
+
+        function generateInfoBoxContent(data, info) {
+                const countryCodes = {
+                    "Belgium": "BE",
+                    "Malaysia": "MY",
+                    "United States": "US",
+                    "China": "CN",
+                    "Japan": "JP",
+                    "India": "IN",
+                    "France": "FR",
+                    "Germany": "DE",
+                    "Singapore": "SG",
+                    "United Kingdom": "GB",
+                    // Add more countries as needed
+                };
+
+                const countryName = data.country;
+                const countryCode = countryCodes[countryName] || "UN"; // fallback to UN for unknowns
+
+                let content = "<div style='text-align: center; color: white; padding: 0px;'>";
+                content += `
+                    <img src="https://flagsapi.com/${countryCode}/flat/64.png" 
+                        alt="Flag of ${countryName}" 
+                        style="margin-bottom: 8px;"/>
+                    <h3 style='margin-bottom: 5px; margin-top: 0;'>MMSI: ${data.mmsi}</h3>
+                `;
+                content += "</div>";
+
+                content += "<table class='info-table'>";
+                content += `<tr><td>Message Type</td><td>:</td><td>${data.type} - ${type_dict[data.type]}</td></tr>`;
+                content += `<tr><td>UTC Time</td><td>:</td><td>${data.datetime}</td></tr>`;
+                content += `<tr><td>Radio Channel</td><td>:</td><td>${data.channel}</td></tr>`;
+                content += `<tr><td>Country</td><td>:</td><td>${countryName}</td></tr>`;
+                content += "</table>";
+
+                return content;
+        }
+
+
+</script>
+</html>

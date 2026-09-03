@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ARL AIS Dashboard</title>
+    <link rel="icon" href="AltairLogo2.jpg" type="image/x-icon">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Include Folium CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Include Folium JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.12.0/leaflet-providers.js"></script>
+    <!-- Include Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
+
+    <style>
+        body {
+            margin: 0; /* Remove default margin to make the top-bar full width */
+            background-color: white;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .page-item {
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .page-item.disabled {
+            pointer-events: none;
+            color: grey;
+        }
+        
+        #top-box {
+            height: 10px;
+            width:auto;
+            display: flex;            /* Enable flexbox */
+            justify-content: space-between;  /* Distribute items to left and right */
+            align-items: center;      /* Vertically center the elements */
+            background-color: #000;   /* Adjust to your background color */
+            padding: 10px;            /* Add some padding */
+        }
+
+        p {
+            margin: 0;                /* Remove default margin */
+        }
+
+        .top-button-left {
+            display: flex;            /* To align the buttons horizontally */
+        }
+
+        /* Angkasa-X Logo at the left of top bar*/
+        #top-logo {
+            max-height: 90%; /* Adjust max-height to fit the top bar's height */
+            object-fit: contain;
+            margin: 10px 0;
+            padding: 10px;
+        }
+        
+        /* Container for the button MAP, VESSELS, PORTS, MORE*/
+        .top-button-container {
+            display: flex;
+            align-items: center;
+            float: right;
+        }
+
+        .top-button-left{
+            float: right;
+            
+        }
+
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button {
+            color: rgb(252, 252, 252);
+            background-color: #000000;
+            border: none;
+            padding: 10px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            margin: 0 10px; /* Adjust margin as needed */
+            margin-bottom: 5px;
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+
+        /* When the above button is active (Clicked)*/
+        .top-button.active {
+            color: rgb(227, 247, 9)
+        }
+
+        /* The button for MAP, VESSELS, PORTS, MORE*/
+        .top-button2 {
+            color: rgb(177, 177, 177);
+            background-color: #000000;
+            border: none;
+            padding: 10px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            margin: 0 10px; /* Adjust margin as needed */
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 5px;
+        }
+
+        /* When the above button is active (Clicked)*/
+        .top-button2.active {
+            color: rgb(255, 255, 255)
+        }
+        
+        /* COntainer for search form*/
+        #search-form {
+            display: flex;
+            align-items: center;
+            width: 20%;
+            float: left;
+        }
+        
+        /* COntainer for search-box and clear button*/
+        #search-input-form {
+            display: flex;
+            justify-content: space-between; /* Adjust as needed */
+            width: 100%;
+        }
+        
+        #search-box{
+            background-color: white;
+            width:70%;
+            height:100%;
+            display: flex;
+            margin-right:10px;
+            border-radius: 4px;
+        }
+        
+        /* the form to receive the searh input*/
+        #search-input {
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            width: 100%;
+        }
+        
+        /* clear-button to clear search input */
+        #clear-button {
+            background-color: #fff;
+            border: none;
+            border-radius:4px;
+            color: gray;
+            padding: 0 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        #clear-button:hover {
+            background-color: #000034; /* Change color on hover if desired */
+            transition: background-color 0.3s
+        }
+        
+        /* the search button used to submit*/
+        .search-button {
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        #intro-box {
+            margin-left: 100px;
+            margin-bottom: 20px; /* Adjust the bottom margin of the container if needed */
+        }
+
+        #intro-box h1 {
+            margin-bottom: 5px; /* Adjust the bottom margin of the h1 element */
+        }
+
+        #intro-box p {
+            margin-top: 0; /* Remove default top margin of the p element */
+        }
+
+        #table{
+            margin-right: 100px;
+            margin-left: 100px;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        #table table {
+            width: 100%;
+            border-collapse: collapse; /* Collapse table borders */
+        }
+
+        #table th {
+            padding: 8px 12px; /* Add padding to the table header cells */
+            border: 1px solid #ddd;
+        }
+
+        #table td {
+            padding: 8px 12px; /* Add padding to the table header cells */
+            border: 1px solid #ddd;
+            cursor: pointer; /* Add cursor pointer to table cells */
+        }
+
+        .active {
+            font-weight: bold;
+        }
+
+        .pagination{
+            margin-bottom: 40px;
+        }
+
+        /* Popup styles */
+        #popup {
+            display: none; /* Initially hidden */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        #popup .popup-content {
+            width: 100%;
+            height: 100%;
+        }
+
+        #popup .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #popup .close-btn:hover {
+            color: red;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            font-size: 12px;
+        }
+
+        .label-left,
+        .label-right {
+            font-size: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="top-box">
+        <a href="map.html" style="text-decoration: none;">
+            <p style="color: white; font-family: 'Outfit', sans-serif; margin: 0px;">Altair Research Lab</p>
+        </a>
+        <p style="color: white; font-family: 'Outfit', sans-serif; margin-left: 160px; font-weight: 300;">FleetEye</p>
+        <div class="top-button-left">
+            <!-- Toggle Switch with AIS/EO labels
+            <div class="toggle-label">
+                <span class="label-left">AIS Map</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggleMap">
+                    <span class="slider round"></span>
+                </label>
+                <span class="label-right">EO Map</span>
+            </div> -->
+            <button id="btnProfile" class="top-button2"><i class='bx bxs-user-circle'></i></button>
+            <button id="btnLogout" class="top-button2"><i class='bx bx-log-out-circle'></i></button>
+    
+
+        </div>
+    </div>
+
+    <div id="top-box">
+        <div id="search-form">
+            <form id="search-input-form">
+                <div id="search-box">
+                    <input type="text" id="search-input" placeholder="Search Vessel/Ports">
+                    <button type="submit" class="search-button"><i class='bx bx-search'></i></button>
+                </div>
+            </form>
+        </div>
+        <div class="top-button-container">
+            <button id="map-top-button" class="top-button">MAP</button>
+            <!-- <button id="taskingbtn" class="top-button" >TASKING</button> -->
+            <button class="top-button">TASKING</button>
+            <button class="top-button">VESSELS</button>
+            <button id="btnPort" class="top-button">PORTS</button>
+        </div>
+    </div>
+
+    <div id="intro-box">
+        <h1>Ports Database</h1>
+        <p1>Details of over 6,000 ports worldwide, including description of the port and ports positions on the map. All vessels nearby each port are also visible on the map.</p1>
+    </div>
+
+    <div id="table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>LOCODE</th>
+                    <th>Port</th>
+                    <th>Location</th> <!-- Added Location column -->
+                </tr>
+            </thead>
+            <tbody id="portTableBody">
+                <!-- Table rows will be injected here -->
+            </tbody>
+        </table>
+        <div id="pagination" class="pagination">
+            <!-- Pagination links will be injected here -->
+             
+        </div>
+    </div>
+
+    <!-- Popup for map -->
+    <div id="popup" style="display: none;">
+        <div id="map-container" style="height: 400px;"></div>
+        <button onclick="closePopup()">Close</button>
+    </div>
+    
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Get all the buttons with the class 'top-button'
+        var buttons = document.querySelectorAll('.top-button');
+
+        // Add a click event listener to each button
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                // Remove 'active' class from all buttons
+                buttons.forEach(function (btn) {
+                    btn.classList.remove('active');
+                });
+
+                // Add 'active' class to the clicked button
+                button.classList.add('active');
+            });
+        });
+
+        if (document.getElementById('toggleMap')) {
+            document.getElementById('toggleMap').addEventListener('change', function () {
+                if (this.checked) {
+                    window.location.href = 'eomap.html';
+                } else {
+                    window.location.href = 'map.html';
+                }
+            });
+
+            window.addEventListener('DOMContentLoaded', function () {
+                const currentPage = window.location.pathname.split('/').pop();
+                document.getElementById('toggleMap').checked = (currentPage === 'map.html');
+            });
+        }
+    });
+
+    // Logout functionality
+    document.getElementById('btnLogout').addEventListener('click', function() {
+        // Remove user information from local storage
+        sessionStorage.clear();
+        // Redirect to the logout page or perform other logout actions
+        window.location.href = 'index.html';
+    });
+
+    document.getElementById('btnProfile').addEventListener('click', function() {
+        // Redirect to the profile page
+        window.location.href = 'profile.html';
+    });
+
+    document.getElementById('map-top-button').addEventListener('click', function() {
+        // Redirect to the map page
+        window.location.href = 'map.html';
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const itemsPerPage = 15;
+        let currentPage = 1;
+        let totalPages = 1;
+        let totalItems = 0;
+
+        // Function to fetch data from the API
+        async function fetchData(page, itemsPerPage) {
+            try {
+                const response = await fetch(`${API_BASE}/port/pagination?page=${page}&page_size=${itemsPerPage}`);
+
+                if (!response.ok) {
+                    console.error('Failed to fetch data:', response.statusText);
+                    return { data: [], total_items: 0 };
+                }
+
+                const result = await response.json();
+                console.log('API response:', result); // Log the response for debugging
+                return { data: result.data, total_items: result.total_items }; // Adjusted to match the API response structure
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return { data: [], total_items: 0 };
+            }
+        }
+
+        // Function to display table rows based on currentPage
+        async function renderTablePage(page) {
+            const { data, total_items } = await fetchData(page, itemsPerPage);
+            totalItems = total_items;
+            totalPages = Math.ceil(totalItems / itemsPerPage);
+
+            const tableBody = document.getElementById('portTableBody');
+            tableBody.innerHTML = '';
+
+            data.forEach(port => {
+                const row = `<tr>
+                    <td>${port.country}</td>
+                    <td>${port.locode}</td>
+                    <td>${port.port}</td>
+                    <td class="show-popup" data-lat="${port.latitude}" data-lon="${port.longitude}">${port.latitude}, ${port.longitude}</td> <!-- Added Location data -->
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+
+            renderPagination(); // Ensure pagination is rendered after fetching data
+        }
+
+        // Function to render pagination links with ellipsis
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            const prevButton = `<div class="page-item" onclick="changePage(${currentPage - 1})">&laquo;</div>`;
+            pagination.innerHTML += prevButton;
+
+            const renderPageItem = (page, isActive) => `
+                <div class="page-item ${isActive ? 'active' : ''}" onclick="changePage(${page})">${page}</div>
+            `;
+
+            const renderEllipsis = () => '<div class="page-item">...</div>';
+
+            if (totalPages > 1) {
+                pagination.innerHTML += renderPageItem(1, currentPage === 1);
+                if (totalPages > 1) {
+                    pagination.innerHTML += renderPageItem(2, currentPage === 2);
+                }
+            }
+
+            if (currentPage > 4) {
+                pagination.innerHTML += renderEllipsis();
+            }
+
+            for (let i = Math.max(3, currentPage - 2); i <= Math.min(totalPages - 2, currentPage + 2); i++) {
+                pagination.innerHTML += renderPageItem(i, i === currentPage);
+            }
+
+            if (currentPage < totalPages - 3) {
+                pagination.innerHTML += renderEllipsis();
+            }
+
+            if (totalPages > 2) {
+                pagination.innerHTML += renderPageItem(totalPages - 1, currentPage === totalPages - 1);
+                pagination.innerHTML += renderPageItem(totalPages, currentPage === totalPages);
+            }
+
+            const nextButton = `<div class="page-item" onclick="changePage(${currentPage + 1})">&raquo;</div>`;
+            pagination.innerHTML += nextButton;
+        }
+
+        window.changePage = async function(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            await renderTablePage(currentPage);
+        };
+
+        // Initial render
+        await renderTablePage(currentPage);
+
+        document.getElementById('clear-button').addEventListener('click', function () {
+            document.getElementById('search-input').value = '';
+        });
+
+        document.getElementById('search-input-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const searchText = document.getElementById('search-input').value.toLowerCase();
+            // Implement search functionality as needed
+        });
+
+        // Event delegation to handle clicks on table rows
+        document.getElementById('portTableBody').addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.classList.contains('show-popup')) {
+                const latitude = parseFloat(target.getAttribute('data-lat'));
+                const longitude = parseFloat(target.getAttribute('data-lon'));
+                showPopup(latitude, longitude);
+            }
+        });
+    });
+
+    let currentMap = null; // Variable to store the current map instance
+
+    // Function to show the popup with the map
+    function showPopup(latitude, longitude) {
+        const popup = document.getElementById('popup');
+        if (!popup) {
+            console.error('Popup element not found');
+            return;
+        }
+
+        // Remove the previous map instance if it exists
+        if (currentMap) {
+            currentMap.remove();
+            currentMap = null; // Reset currentMap variable
+        }
+
+        // Initialize the map in the map-container div
+        const mapContainer = document.getElementById('map-container');
+        mapContainer.innerHTML = ''; // Clear previous map container contents
+
+        const map = L.map('map-container').setView([latitude, longitude], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 12,
+        }).addTo(map);
+
+        L.marker([latitude, longitude]).addTo(map);
+
+        currentMap = map; // Store the current map instance
+
+        popup.style.display = 'block'; // Display the popup
+    }
+
+    // Function to close the popup
+    function closePopup() {
+        const popup = document.getElementById('popup');
+        popup.style.display = 'none';
+        document.getElementById('map-container').innerHTML = ''; // Clear the map container
+        if (currentMap) {
+            currentMap.remove(); // Remove the map instance
+            currentMap = null; // Reset currentMap variable
+        }
+    }
+</script>
+</html>

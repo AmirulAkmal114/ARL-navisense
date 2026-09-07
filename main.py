@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from backend import ais_decoder
 from backend.db import query, insert_many
 
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
+
 app = FastAPI(title="NaviSense API")
 
 app.add_middleware(
@@ -505,4 +507,4 @@ async def demo_request(request: Request):
     return {"status": "success"}
 
 
-app.mount("/", StaticFiles(directory="public", html=True), name="static")
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

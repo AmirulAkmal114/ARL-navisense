@@ -507,4 +507,5 @@ async def demo_request(request: Request):
     return {"status": "success"}
 
 
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

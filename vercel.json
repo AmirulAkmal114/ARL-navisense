@@ -2,10 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["sin1"],
   "functions": {
-    "main.py": {
+    "api/index.py": {
       "memory": 1024,
       "maxDuration": 300,
-      "excludeFiles": "{scripts/**,supabase/**,.env.example}"
+      "excludeFiles": "{scripts/**,supabase/**,.env.example,.env}"
     }
   }
 }

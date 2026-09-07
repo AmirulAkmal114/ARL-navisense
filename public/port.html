@@ -324,15 +324,6 @@
         </a>
         <p style="color: white; font-family: 'Outfit', sans-serif; margin-left: 160px; font-weight: 300;">FleetEye</p>
         <div class="top-button-left">
-            <!-- Toggle Switch with AIS/EO labels
-            <div class="toggle-label">
-                <span class="label-left">AIS Map</span>
-                <label class="switch">
-                    <input type="checkbox" id="toggleMap">
-                    <span class="slider round"></span>
-                </label>
-                <span class="label-right">EO Map</span>
-            </div> -->
             <button id="btnProfile" class="top-button2"><i class='bx bxs-user-circle'></i></button>
             <button id="btnLogout" class="top-button2"><i class='bx bx-log-out-circle'></i></button>
     
@@ -408,21 +399,6 @@
                 button.classList.add('active');
             });
         });
-
-        if (document.getElementById('toggleMap')) {
-            document.getElementById('toggleMap').addEventListener('change', function () {
-                if (this.checked) {
-                    window.location.href = 'eomap.html';
-                } else {
-                    window.location.href = 'map.html';
-                }
-            });
-
-            window.addEventListener('DOMContentLoaded', function () {
-                const currentPage = window.location.pathname.split('/').pop();
-                document.getElementById('toggleMap').checked = (currentPage === 'map.html');
-            });
-        }
     });
 
     // Logout functionality

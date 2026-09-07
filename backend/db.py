@@ -26,3 +26,15 @@ def query(sql, params=None, fetch="all"):
             return cur.rowcount
     finally:
         conn.close()
+
+
+def insert_many(sql, rows):
+    if not rows:
+        return 0
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(sql, rows)
+            return cur.rowcount
+    finally:
+        conn.close()

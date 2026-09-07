@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend import ais_decoder
-from backend.db import query
+from backend.db import query, insert_many
 
 app = FastAPI(title="NaviSense API")
 
@@ -373,9 +373,6 @@ async def ingest_nmea(request: Request):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     body = await request.json()
-    nmea = body.get("nmea")
-    if not nmea:
-        raise HTTPException(status_code=400, detail="nmea is required")
 
     ts = None
     if body.get("timestamp"):
@@ -384,13 +381,91 @@ async def ingest_nmea(request: Request):
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid timestamp format")
 
-    query(
-        "INSERT INTO nmea_data (nmea, timestamp) VALUES (%s, %s)",
-        (nmea, ts or utc_now()),
-        fetch="none",
+    nmea = body.get("nmea")
+    raw_data = body.get("data") or []
+    device_id = body.get("device_id")
+    voltage = body.get("voltage")
+    temperature = body.get("temperature")
+
+    messages = []
+    if nmea:
+        messages.append(nmea)
+    if isinstance(raw_data, list):
+        for msg in raw_data:
+            msg = (msg or "").strip()
+            if msg:
+                messages.append(msg)
+
+    if messages:
+        rows = [(msg, ts or utc_now()) for msg in messages]
+        count = insert_many("INSERT INTO nmea_data (nmea, timestamp) VALUES (%s, %s)", rows)
+        return {"status": "success", "saved": count, "table": "nmea_data"}
+
+    if voltage is not None or temperature is not None:
+        query(
+            "INSERT INTO sensor_data (device_id, voltage, temperature, nmea, timestamp) VALUES (%s, %s, %s, %s, %s)",
+            (device_id, voltage, temperature, None, ts or utc_now()),
+            fetch="none",
+        )
+        return {"status": "success", "saved": 1, "table": "sensor_data"}
+
+    raise HTTPException(status_code=400, detail="No NMEA messages or sensor values provided")
+
+
+@app.post("/api/insert_ais_data")
+async def insert_ais_data(limit: int = Query(1000, ge=1, le=5000)):
+    latest_row = query(
+        "SELECT COALESCE(MAX(time_stamp), 'epoch'::timestamptz) AS latest FROM ais_data_sat",
+        fetch="one",
+    )
+    since = latest_row["latest"] if latest_row else None
+
+    rows = query(
+        "SELECT nmea, timestamp FROM nmea_data WHERE timestamp > %s ORDER BY timestamp ASC LIMIT %s",
+        (since, limit),
     )
 
-    return {"status": "success"}
+    if not rows:
+        result = query("SELECT DISTINCT mmsi FROM ais_data_sat WHERE mmsi IS NOT NULL")
+        return {
+            "message": "No new AIS data to archive",
+            "inserted": 0,
+            "inserted_mmsi": [],
+            "all_mmsi_in_table": [row["mmsi"] for row in result],
+        }
+
+    archive_rows = []
+    inserted_mmsi = []
+    for row in rows:
+        line = row["nmea"]
+        mmsi = None
+        try:
+            if line and line.startswith("!AIVDM"):
+                parts = line.split(",")
+                if len(parts) >= 6:
+                    bitstring = ais_decoder.nmea_payload_to_bitstring(parts[5])
+                    decoded = ais_decoder.decode_ais(bitstring)
+                    if decoded.get("mmsi") is not None:
+                        mmsi = str(decoded["mmsi"])
+        except Exception:
+            mmsi = None
+
+        archive_rows.append((row["timestamp"], 1, 2, 101, line, mmsi))
+        if mmsi and mmsi not in inserted_mmsi:
+            inserted_mmsi.append(mmsi)
+
+    inserted = insert_many(
+        "INSERT INTO ais_data_sat (time_stamp, ch1, ch2, rssi, data_column, mmsi) VALUES (%s, %s, %s, %s, %s, %s)",
+        archive_rows,
+    )
+
+    result = query("SELECT DISTINCT mmsi FROM ais_data_sat WHERE mmsi IS NOT NULL")
+    return {
+        "message": "AIS data inserted successfully",
+        "inserted": inserted,
+        "inserted_mmsi": inserted_mmsi,
+        "all_mmsi_in_table": [row["mmsi"] for row in result],
+    }
 
 
 @app.post("/api/demo-request")

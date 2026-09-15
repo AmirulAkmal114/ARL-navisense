@@ -72,6 +72,12 @@ def decode_item(item):
     except Exception:
         return None
 
+    if "message_type" in decoded and "type" not in decoded:
+        decoded["type"] = decoded["message_type"]
+    if "country" not in decoded and decoded.get("mmsi") is not None:
+        decoded["country"] = ais_decoder.get_country_from_mmsi(decoded["mmsi"])
+    decoded.setdefault("channel", "A")
+
     decoded["raw"] = line
 
     ts = item.get("timestamp")

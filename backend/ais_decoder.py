@@ -54,6 +54,14 @@ def nmea_payload_to_bitstring(payload):
     return ''.join(charto6bits.get(char, '') for char in payload)
 
 
+def decode_text(bitstring, start, end):
+    out = []
+    for i in range(start, end, 6):
+        v = int(bitstring[i:i + 6], 2)
+        out.append(chr(v + 64) if v < 32 else chr(v + 32))
+    return ''.join(out).strip('@').strip()
+
+
 def get_country_from_mmsi(mmsi):
     mid = int(str(mmsi)[:3])
     return country_dict.get(mid, "Unknown")
@@ -85,6 +93,8 @@ def decode_ais(bitstring):
         return decode_position_report_class_b(bitstring)
     elif msg_type == 19:
         return decode_extended_class_b_position(bitstring)
+    elif msg_type == 21:
+        return decode_aton_report(bitstring)
     elif msg_type == 24:
         return decode_static_data_class_b(bitstring)
     else:
@@ -278,25 +288,35 @@ def decode_base_station_report(bitstring):
 
 def decode_static_voyage(bitstring):
     mmsi = int(bitstring[8:38], 2)
-    imo = int(bitstring[40:70], 2)
-    callsign = ''.join([chr(int(bitstring[i:i + 6], 2) + 64) for i in range(70, 112, 6)]).strip('@')
-    vessel_name = ''.join([chr(int(bitstring[i:i + 6], 2) + 64) for i in range(112, 232, 6)]).strip('@')
-    ship_type = int(bitstring[232:240], 2)
-
     return {
-        "message_type": 5,
+        "type": 5,
         "mmsi": mmsi,
-        "imo": imo,
-        "callsign": callsign,
-        "vessel_name": vessel_name,
-        "ship_type": ship_type
+        "country": get_country_from_mmsi(mmsi),
+        "ais_version": int(bitstring[38:40], 2),
+        "imo": int(bitstring[40:70], 2),
+        "callsign": decode_text(bitstring, 70, 112),
+        "shipname": decode_text(bitstring, 112, 232),
+        "shiptype": int(bitstring[232:240], 2),
+        "to_bow": int(bitstring[240:250], 2),
+        "to_stern": int(bitstring[250:260], 2),
+        "to_port": int(bitstring[260:265], 2),
+        "to_starboard": int(bitstring[265:270], 2),
+        "epfd": int(bitstring[270:274], 2),
+        "eta_month": int(bitstring[275:279], 2),
+        "eta_day": int(bitstring[279:283], 2),
+        "eta_hour": int(bitstring[283:287], 2),
+        "eta_minute": int(bitstring[287:293], 2),
+        "draught": int(bitstring[293:298], 2) / 10.0,
+        "destination": decode_text(bitstring, 298, 328),
+        "dte": int(bitstring[328], 2),
+        "channel": "A",
     }
 
 
 def decode_position_report_class_b(bitstring):
     mmsi = int(bitstring[8:38], 2)
-    lon = int(bitstring[57:85], 2)
-    lat = int(bitstring[85:112], 2)
+    lon = int(bitstring[61:89], 2)
+    lat = int(bitstring[89:116], 2)
     lon = (lon if lon < (1 << 27) else lon - (1 << 28)) / 600000.0
     lat = (lat if lat < (1 << 26) else lat - (1 << 27)) / 600000.0
 
@@ -304,12 +324,23 @@ def decode_position_report_class_b(bitstring):
         "source": 0,
         "type": 18,
         "mmsi": mmsi,
-        "speed": int(bitstring[46:56], 2) / 10.0,
+        "country": get_country_from_mmsi(mmsi),
+        "speed": int(bitstring[50:60], 2) / 10.0,
+        "accuracy": int(bitstring[60], 2),
         "lon": lon,
         "lat": lat,
-        "course": int(bitstring[112:124], 2) / 10.0,
-        "heading": int(bitstring[124:133], 2),
-        "timestamp": int(bitstring[133:139], 2)
+        "course": int(bitstring[116:128], 2) / 10.0,
+        "heading": int(bitstring[128:137], 2),
+        "second": int(bitstring[137:143], 2),
+        "cs": int(bitstring[145], 2),
+        "display": int(bitstring[146], 2),
+        "dsc": int(bitstring[147], 2),
+        "band": int(bitstring[148], 2),
+        "msg22": int(bitstring[149], 2),
+        "assigned": int(bitstring[150], 2),
+        "raim": int(bitstring[151], 2),
+        "radio": int(bitstring[152:168], 2),
+        "channel": "A",
     }
 
 
@@ -318,58 +349,102 @@ def decode_static_data_class_b(bitstring):
     part_number = int(bitstring[38:40], 2)
 
     if part_number == 0:
-        vessel_name = ''.join([chr(int(bitstring[i:i + 6], 2) + 64) for i in range(40, 160, 6)]).strip('@')
         return {
-            "message_type": 24,
+            "type": 24,
             "part": 0,
             "mmsi": mmsi,
-            "vessel_name": vessel_name
+            "country": get_country_from_mmsi(mmsi),
+            "shipname": decode_text(bitstring, 40, 160),
+            "channel": "A",
         }
     elif part_number == 1:
-        callsign = ''.join([chr(int(bitstring[i:i + 6], 2) + 64) for i in range(40, 70, 6)]).strip('@')
-        ship_type = int(bitstring[70:78], 2)
-        return {
-            "message_type": 24,
+        mmsi_str = str(mmsi)
+        base = {
+            "type": 24,
             "part": 1,
             "mmsi": mmsi,
-            "callsign": callsign,
-            "ship_type": ship_type
+            "country": get_country_from_mmsi(mmsi),
+            "callsign": decode_text(bitstring, 40, 70),
+            "shiptype": int(bitstring[70:78], 2),
+            "vendorid": int(bitstring[78:82], 2),
+            "model": int(bitstring[82:90], 2),
+            "serial": int(bitstring[90:110], 2),
+            "channel": "A",
         }
-    return {"message_type": 24, "part": part_number, "mmsi": mmsi, "info": "Unknown part"}
+        if mmsi_str.startswith("98"):
+            base.update({
+                "to_bow": int(bitstring[130:139], 2),
+                "to_stern": int(bitstring[139:148], 2),
+                "to_port": int(bitstring[148:154], 2),
+                "to_starboard": int(bitstring[154:160], 2),
+            })
+        else:
+            base["mothership_mmsi"] = int(bitstring[130:160], 2)
+        return base
+    return {"type": 24, "part": part_number, "mmsi": mmsi, "country": get_country_from_mmsi(mmsi), "info": "Unknown part"}
+
+
+def decode_aton_report(bitstring):
+    mmsi = int(bitstring[8:38], 2)
+    lon = int(bitstring[165:192], 2)
+    lat = int(bitstring[193:219], 2)
+    lon = (lon if lon < (1 << 27) else lon - (1 << 28)) / 600000.0
+    lat = (lat if lat < (1 << 26) else lat - (1 << 27)) / 600000.0
+
+    return {
+        "source": 0,
+        "type": 21,
+        "mmsi": mmsi,
+        "country": get_country_from_mmsi(mmsi),
+        "aid_type": int(bitstring[38:43], 2),
+        "name": decode_text(bitstring, 43, 163),
+        "accuracy": int(bitstring[163], 2),
+        "lon": lon,
+        "lat": lat,
+        "to_bow": int(bitstring[220:228], 2),
+        "to_stern": int(bitstring[229:237], 2),
+        "to_port": int(bitstring[238:243], 2),
+        "to_starboard": int(bitstring[244:249], 2),
+        "epfd": int(bitstring[250:254], 2),
+        "off_position": int(bitstring[254], 2),
+        "virtual_aid": int(bitstring[255], 2),
+        "channel": "A",
+    }
 
 
 def decode_extended_class_b_position(bitstring):
     mmsi = int(bitstring[8:38], 2)
-    sog = int(bitstring[46:56], 2) / 10.0
-    lon_raw = int(bitstring[57:85], 2)
-    lat_raw = int(bitstring[85:112], 2)
-    cog = int(bitstring[112:124], 2) / 10.0
-    heading = int(bitstring[124:133], 2)
-    timestamp = int(bitstring[133:139], 2)
+    sog = int(bitstring[50:60], 2) / 10.0
+    lon_raw = int(bitstring[61:89], 2)
+    lat_raw = int(bitstring[89:116], 2)
+    cog = int(bitstring[116:128], 2) / 10.0
+    heading = int(bitstring[128:137], 2)
+    timestamp = int(bitstring[137:143], 2)
 
     lon = (lon_raw if lon_raw < (1 << 27) else lon_raw - (1 << 28)) / 600000.0
     lat = (lat_raw if lat_raw < (1 << 26) else lat_raw - (1 << 27)) / 600000.0
 
-    name = ''.join([chr(int(bitstring[i:i + 6], 2) + 64) for i in range(143, 263, 6)]).strip('@')
-    ship_type = int(bitstring[263:271], 2)
-    dimension_to_bow = int(bitstring[271:280], 2)
-    dimension_to_stern = int(bitstring[280:289], 2)
-    dimension_to_port = int(bitstring[289:295], 2)
-    dimension_to_starboard = int(bitstring[295:301], 2)
-
     return {
-        "message_type": 19,
+        "source": 0,
+        "type": 19,
         "mmsi": mmsi,
-        "speed_over_ground": sog,
-        "longitude": lon,
-        "latitude": lat,
-        "course_over_ground": cog,
-        "true_heading": heading,
-        "timestamp": timestamp,
-        "vessel_name": name,
-        "ship_type": ship_type,
-        "dimension_to_bow": dimension_to_bow,
-        "dimension_to_stern": dimension_to_stern,
-        "dimension_to_port": dimension_to_port,
-        "dimension_to_starboard": dimension_to_starboard
+        "country": get_country_from_mmsi(mmsi),
+        "speed": sog,
+        "accuracy": int(bitstring[60], 2),
+        "lon": lon,
+        "lat": lat,
+        "course": cog,
+        "heading": heading,
+        "second": timestamp,
+        "shipname": decode_text(bitstring, 148, 268),
+        "shiptype": int(bitstring[268:276], 2),
+        "to_bow": int(bitstring[276:285], 2),
+        "to_stern": int(bitstring[285:294], 2),
+        "to_port": int(bitstring[294:300], 2),
+        "to_starboard": int(bitstring[300:306], 2),
+        "epfd": int(bitstring[306:310], 2),
+        "raim": int(bitstring[310], 2),
+        "dte": int(bitstring[311], 2),
+        "assigned": int(bitstring[312], 2),
+        "channel": "A",
     }

@@ -1652,7 +1652,7 @@
 
         
         // When live button is clicked
-        liveButton.addEventListener('click', () => {
+        if (liveButton) liveButton.addEventListener('click', () => {
             limitData = 1000;
             durationBar.style.display = 'none';
             historyButton.classList.remove("active");
@@ -1668,7 +1668,7 @@
             }
         });
 
-        resetButton.addEventListener('click', function() {
+        if (resetButton) resetButton.addEventListener('click', function() {
             resetMap();
         });
         
@@ -2022,7 +2022,7 @@
             const validMsgTypes = ['1','2','3','4','21','18','19'];
             firstDataPoint = null;
             aisData.forEach(item => {
-                if (validMsgTypes.includes(item.type)) {
+                if (validMsgTypes.includes(String(item.type ?? item.message_type))) {
                     firstDataPoint = item;
                     return; // Exit the loop after finding the first valid data point
                 } else {
@@ -2055,7 +2055,7 @@
             data.forEach(item => {
 
                 // Skip static messages
-                if (item.type === '5' || item.type === '24') return;
+                if (String(item.type ?? item.message_type) === '5' || String(item.type ?? item.message_type) === '24') return;
 
                 // Validate position
                 if ('0' in item || !('lat' in item) || !('lon' in item)) return;
@@ -2126,12 +2126,13 @@
                 let shipName = null;
 
                 for (const info of data) {
+                    const itype = String(info.type ?? info.message_type);
                     if (
-                        ((info.type === '5' || info.type === '24') && info.mmsi === mmsi)
-                        || (info.type === '19' && info.mmsi === mmsi)
+                        ((itype === '5' || itype === '24') && info.mmsi === mmsi)
+                        || (itype === '19' && info.mmsi === mmsi)
                     ) {
                         iteminfo = info;
-                        shipName = info.shipname;
+                        shipName = info.shipname ?? info.vessel_name ?? null;
                         popupContent += shipName ?? "";
                         break;
                     }
@@ -2214,11 +2215,12 @@
             let lastItemInfo = null;
 
             aisData.forEach(item => {
-                if ((item.type === '1' || item.type === '2' || item.type === '3' || item.type === '4' || item.type === '18' || item.type === '19' || item.type === '21') && !('0' in item) && 'lat' in item && 'lon' in item && !isNaN(item.lat) && !isNaN(item.lon)) {
+                const itp = String(item.type ?? item.message_type);
+                if ((itp === '1' || itp === '2' || itp === '3' || itp === '4' || itp === '18' || itp === '19' || itp === '21') && !('0' in item) && 'lat' in item && 'lon' in item && !isNaN(item.lat) && !isNaN(item.lon)) {
                     lastItem = item;
                 }
 
-                if ((item.type === '5' || item.type === '24' )) {
+                if ((itp === '5' || itp === '24')) {
                     lastItemInfo = item;
                 }
             });
@@ -2372,6 +2374,11 @@
             
             let content = "<div style='text-align: center; color: white; padding: 0px;'>";
 
+            const dtype = String(data.type ?? data.message_type);
+            const shipname = data.shipname ?? data.vessel_name;
+            const shiptype = data.shiptype ?? data.ship_type;
+            const channel = data.channel ?? "A";
+
             const countryName = data.country;
             const countryCode = countryCodes[countryName] || "UN"; // fallback to UN for unknowns
 
@@ -2412,14 +2419,14 @@
     
             // Common fields for different message types
             content += "<tr><td colspan='3' style='background-color: white; color: black; padding: 5px; text-align: center; font-weight: bold;'>SHIP</td></tr>";
-            content += `<tr><td>Message Type</td><td>:</td><td>${data.type} - ${type_dict[data.type]}</td></tr>`;
+            content += `<tr><td>Message Type</td><td>:</td><td>${dtype} - ${type_dict[dtype]}</td></tr>`;
             content += "<tr><td>UTC Time</td><td>:</td><td>" + data.datetime + " (" + timeAgo + ")</td></tr>";
-            content += "<tr><td>Radio Channel</td><td>:</td><td>" + data.channel + "</td></tr>";
+            content += "<tr><td>Radio Channel</td><td>:</td><td>" + channel + "</td></tr>";
             content += "<tr><td>Country</td><td>:</td><td>" + data.country + "</td></tr>";
-    
-    
+
+
             // Additional fields based on message type
-            if (String(data.type) === '1' || String(data.type) === '2' || String(data.type) === '3'){
+            if (dtype === '1' || dtype === '2' || dtype === '3'){
                 content += "<tr><td colspan='3' style='background-color: white; color: black; padding: 5px; text-align: center; font-weight: bold;'>VOYAGE</td></tr>";
                 content += `<tr><td>Navigation Status</td><td>:</td><td>${data.status} - ${status_dict[data.status]}</td></tr>`;
                 content += "<tr><td>Rate of Turn (ROT)</td><td>:</td><td>" + getROT(data.turn) + "</td></tr>";
@@ -2433,7 +2440,7 @@
                 // content += `<tr><td>Special Maneuver</td><td>:</td><td>${maneuver_dict[data.maneuver]}</td></tr>`;
                 // content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
                 // content += "<tr><td>Communication Status</td><td>:</td><td>" + data.radio + "</td></tr>";
-            } else if (data.type === '18') {
+            } else if (dtype === '18') {
                 content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + data.speed + (data.speed === '1022' ? ' - ≥102.2knots': data.speed === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
                 content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
                 content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
@@ -2449,16 +2456,16 @@
                 content += "<tr><td>Assigned</td><td>:</td><td>" + data.assigned + (data.assigned === '0' ? ' - Autonomous ': ' - Assigned ') + "mode</td></tr>";
                 content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
                 content += "<tr><td>Communication Status</td><td>:</td><td>" + data.radio + "</td></tr>";
-            } else if (data.type === '19') {
-                content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + data.speed + (data.speed === '1022' ? ' - ≥102.2knots': data.speed === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
+            } else if (dtype === '19') {
+                content += "<tr><td>Speed over Ground (SOG)</td><td>:</td><td>" + (data.speed ?? data.speed_over_ground) + ((data.speed ?? data.speed_over_ground) === '1022' ? ' - ≥102.2knots': (data.speed ?? data.speed_over_ground) === '1023' ? ' - Data unavailable' : 'knots')  + "</td></tr>";
                 content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
-                content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
-                content += "<tr><td>Longitude</td><td>:</td><td>" + data.lon + "</td></tr>";
-                content += "<tr><td>Course over Ground (COG)</td><td>:</td><td>" + data.course + (data.course === '3600' ? '' : "°") + "</td></tr>";
-                content += "<tr><td>True Heading (HDG)</td><td>:</td><td>" + data.heading + (data.heading === '511' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>Latitude</td><td>:</td><td>" + (data.lat ?? data.latitude) + "</td></tr>";
+                content += "<tr><td>Longitude</td><td>:</td><td>" + (data.lon ?? data.longitude) + "</td></tr>";
+                content += "<tr><td>Course over Ground (COG)</td><td>:</td><td>" + (data.course ?? data.course_over_ground) + ((data.course ?? data.course_over_ground) === '3600' ? '' : "°") + "</td></tr>";
+                content += "<tr><td>True Heading (HDG)</td><td>:</td><td>" + (data.heading ?? data.true_heading) + ((data.heading ?? data.true_heading) === '511' ? '' : "°") + "</td></tr>";
                 content += "<tr><td>Time Stamp</td><td>:</td><td>" + getTimestamp(data.second) + "</td></tr>";
-                content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
-                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+                content += "<tr><td>Vessel Name</td><td>:</td><td>" + shipname + "</td></tr>";
+                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(shiptype) + "</td></tr>";
                 content += "<tr><td>Dimension</td></tr>";
                 content += "<tr><td>To Bow</td><td>:</td><td>" + data.to_bow + "m</td></tr>";
                 content += "<tr><td>To Stern</td><td>:</td><td>" + data.to_stern + "m</td></tr>";
@@ -2468,7 +2475,7 @@
                 content += "<tr><td>RAIM Flag</td><td>:</td><td>" + data.raim + (data.raim === '0' ? ' - RAIM not in use': ' - RAIM in use') + "</td></tr>";
                 content += "<tr><td>Data Terminal Equipment</td><td>:</td><td>" + data.dte + (data.dte === '0' ? ' - Ready': ' - Not Ready') + "</td></tr>";
                 content += "<tr><td>Assigned</td><td>:</td><td>" + data.assigned + (data.assigned === '0' ? ' - Autonomous ': ' - Assigned ') + "mode</td></tr>";
-            } else if (data.type === '21') {
+            } else if (dtype === '21') {
 
             content += "<tr><td>AtoN Type</td><td>:</td><td>" + data.aid_type + "</td></tr>";
             content += "<tr><td>AtoN Name</td><td>:</td><td>" + (data.name ? data.name.trim() : 'N/A') + "</td></tr>";
@@ -2477,7 +2484,7 @@
             content += "<tr><td>Virtual AtoN</td><td>:</td><td>" + 
                     data.virtual_aid + (data.virtual_aid === 0 ? ' - Physical AtoN' : ' - Virtual AtoN') + "</td></tr>";
 
-            } else if (data.type === '4') {
+            } else if (dtype === '4') {
                 content += "<tr><td>Base Station Time (UTC)</td><td>:</td><td>" + formatTime(data.year, data.month, data.day, data.hour, data.minute, data.second) + "</td></tr>";
                 content += "<tr><td>Position Accuracy</td><td>:</td><td>" + data.accuracy + (data.accuracy === '0' ? ' - GNSS fix >10m' : ' - DGPS fix <10ms') + "</td></tr>";
                 content += "<tr><td>Latitude</td><td>:</td><td>" + data.lat + "</td></tr>";
@@ -2500,17 +2507,20 @@
         // function to show static data of vessel (may be change)
         function generateAdditionalInfoBoxContent(data) {
             let content = "<tr><td colspan='3'><hr class='connected-line'></td></tr>";
-            content += `<tr><td>Message Type</td><td>:</td><td>${data.type} - ${type_dict[data.type]}</td></tr>`;
+            const adtype = String(data.type ?? data.message_type);
+            const ashipname = data.shipname ?? data.vessel_name;
+            const ashiptype = data.shiptype ?? data.ship_type;
+            content += `<tr><td>Message Type</td><td>:</td><td>${adtype} - ${type_dict[adtype]}</td></tr>`;
             content += "<tr><td>UTC Time</td><td>:</td><td>" + data.datetime + "</td></tr>";
-            content += "<tr><td>Radio Channel</td><td>:</td><td>" + data.channel + "</td></tr>";
+            content += "<tr><td>Radio Channel</td><td>:</td><td>" + (data.channel ?? "A") + "</td></tr>";
     
-            if (data.type === '5') {
+            if (adtype === '5') {
                 //content += "<tr><td></td><td>:</td><td>" + data. + "</td></tr>";
                 content += "<tr><td>AIS Version</td><td>:</td><td>" + data.ais_version + (data.ais_version === '0' ? ' - ITU1371': ` - AIS Future editions`) + "</td></tr>";
                 content += "<tr><td>IMO Number</td><td>:</td><td>" + data.imo + "</td></tr>";
                 content += "<tr><td>Call Sign</td><td>:</td><td>" + data.callsign + "</td></tr>";
-                content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
-                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+                content += "<tr><td>Vessel Name</td><td>:</td><td>" + ashipname + "</td></tr>";
+                content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(ashiptype) + "</td></tr>";
                 content += "<tr><td>Dimension</td></tr>";
                 let length = data.to_bow + data.to_stern
                 let width = data.to_port + data.to_starboard
@@ -2530,11 +2540,12 @@
                 content += "<tr><td>Draught </td><td>:</td><td>" + data.draught + "m</td></tr>";
                 content += "<tr><td>Destination</td><td>:</td><td>" + data.destination + "</td></tr>";
                 content += "<tr><td>Data Terminal Equipment</td><td>:</td><td>" + data.dte + (data.dte === '0' ? ' - Ready': ' - Not Ready') + "</td></tr>";
-            } else if (data.type === '24') {
-                if (data.partno === 'A') {
-                    content += "<tr><td>Vessel Name</td><td>:</td><td>" + data.shipname + "</td></tr>";
-                } else if (data.partno === 'B') {
-                    content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(data.shiptype) + "</td></tr>";
+            } else if (adtype === '24') {
+                const apartno = data.partno ?? (data.part === 0 ? 'A' : data.part === 1 ? 'B' : null);
+                if (apartno === 'A') {
+                    content += "<tr><td>Vessel Name</td><td>:</td><td>" + ashipname + "</td></tr>";
+                } else if (apartno === 'B') {
+                    content += "<tr><td>Ship Type</td><td>:</td><td>" + getShipType(ashiptype) + "</td></tr>";
                     content += "<tr><td>Vendor ID</td><td>:</td><td>" + data.vendorid + "</td></tr>";
                     content += "<tr><td>Unit Model code</td><td>:</td><td>" + data.model + "</td></tr>";
                     content += "<tr><td>Serial Number</td><td>:</td><td>" + data.serial + "</td></tr>";
@@ -2771,8 +2782,8 @@
             durationBar.style.display = 'none';
             historyButton.classList.remove("active");
             satelliteDataButton.classList.remove("active");
-            terrestrialDataButton.classList.remove("active");
-            liveButton.classList.add("active");
+            terrestrialDataButton?.classList.remove("active");
+            liveButton?.classList.add("active");
             allDataButton.classList.add("active");
             infostatus = false;
             zoomstatus = false;
@@ -2940,7 +2951,7 @@
                 const countryName = data.country;
                 const countryCode = countryCodes[countryName] || "UN"; // fallback to UN for unknowns
 
-                let content = "<div style='text-align: center; color: white; padding: 0px;'>";
+let content = "<div style='text-align: center; color: white; padding: 0px;'>";
                 content += `
                     <img src="https://flagsapi.com/${countryCode}/flat/64.png" 
                         alt="Flag of ${countryName}" 

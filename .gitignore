@@ -18,3 +18,5 @@ sendToDatabase-*/
 sim900Function-*/
 database-options*.csv
 Provider.docx
+.vercel
+.env*

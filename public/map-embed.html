@@ -1394,44 +1394,30 @@
         
 
         // Logout functionality
-        // document.getElementById('btnLogout').addEventListener('click', function() {
-        //     // Remove user information from local storage
-        //     sessionStorage.removeItem('email');
-        //     sessionStorage.removeItem('token');
-        //     sessionStorage.removeItem('firstname');
-        //     sessionStorage.removeItem('lastname');
-        //     sessionStorage.removeItem('organization');
-        //     sessionStorage.removeItem('timecreated');
-        //     sessionStorage.removeItem('timeexpiry');
-        //     sessionStorage.removeItem('package');
+        document.getElementById('btnLogout').addEventListener('click', function() {
+            // Remove user information from local storage
+            sessionStorage.removeItem('email');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('firstname');
+            sessionStorage.removeItem('lastname');
+            sessionStorage.removeItem('organization');
+            sessionStorage.removeItem('timecreated');
+            sessionStorage.removeItem('timeexpiry');
+            sessionStorage.removeItem('package');
 
-        //     // Redirect to the logout page or perform other logout actions
-        //     window.location.href = 'index.html';
-        // });
+            // Redirect to the logout page or perform other logout actions
+            window.location.href = 'index.html';
+        });
 
-        // document.getElementById('btnPort').addEventListener('click', function() {
-        //     // Redirect to the logout page or perform other logout actions
-        //     window.location.href = 'port.html';
-        // });
+        document.getElementById('map-top-button').addEventListener('click', function() {
+            // Redirect to the full map page
+            window.location.href = 'map.html';
+        });
 
-        // taskingButton.addEventListener('click', function() {
-        //     // Toggle visibility of info-box2
-        //     if (infoBox2.style.display === 'none' || infoBox2.style.display === '') {
-        //         infoBox2.style.display = 'block';  // Show the info box
-        //     } else {
-        //         infoBox2.style.display = 'none';   // Hide the info box
-        //     }
-        // });
-
-        // document.getElementById('map-top-button').addEventListener('click', function() {
-        //     // Redirect to the logout page or perform other logout actions
-        //     window.location.href = 'map.html';
-        // });
-
-        // document.getElementById('btnProfile').addEventListener('click', function() {
-        //     // Redirect to the logout page or perform other logout actions
-        //     window.location.href = 'profile.html';
-        // });
+        document.getElementById('btnProfile').addEventListener('click', function() {
+            // Redirect to the profile page
+            window.location.href = 'profile.html';
+        });
 
 
         // 1️⃣ Check URL for token first
@@ -1460,8 +1446,8 @@
 
                     if (!responseuser.ok) {
                         console.error('Unauthorized Token');
-                        tokenDesc.innerHTML = "Unauthorized Token";
                         setElementsDisplay([tokenLoadingContainer], 'none');
+                        window.location.replace('index.html');
                         return;
                     }
 
@@ -1594,27 +1580,22 @@
         // });
 
         
-        // // When live button is clicked
-        // liveButton.addEventListener('click', () => {
-        //     limitData = 1000;
-        //     durationBar.style.display = 'none';
-        
-        //     if (mode !== "Live") {
-        //         durationBar.style.display = 'none';
-        //         if (option === "MMSI"){
-        //             liveMMSI(mmsiStr);
-        //         } else if (option === "Location"){
-        //             liveLoc(latStr,lonStr);
-        //         } else{
-        //             liveAll()
-        //         }
-        //     }
-        // });
-        
+        // When live button is clicked
+        liveButton.addEventListener('click', () => {
+            limitData = 1000;
+            mode = "Live";
+            if (option === "MMSI" && mmsiStr) {
+                trackMMSI(mmsiStr);
+            } else if (option === "Location" && latStr && lonStr) {
+                liveLoc(latStr, lonStr);
+            } else {
+                liveAll();
+            }
+        });
 
-        // resetButton.addEventListener('click', function() {
-        //     resetMap();
-        // });
+        resetButton.addEventListener('click', function() {
+            resetMap();
+        });
         
         // When search input is submitted
         // searchInputForm.addEventListener('submit',async function(event) {
@@ -2695,9 +2676,13 @@
         // function used to reset map (used a lot)
         function resetMap(){
             limitData = 500;
-            event.preventDefault();
+            if (typeof event !== 'undefined' && event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
             // durationBar.style.display = 'none';
-            historyButton.classList.remove("active");
+            if (typeof historyButton !== 'undefined' && historyButton) {
+                historyButton.classList.remove("active");
+            }
             satelliteDataButton.classList.remove("active");
             terrestrialDataButton.classList.remove("active");
             liveButton.classList.add("active");

@@ -1477,8 +1477,8 @@
 
                 if (!responseuser.ok) {
                     console.error('Unauthorized Token');
-                    tokenDesc.innerHTML = "Unauthorized Token";
                     setElementsDisplay([tokenLoadingContainer], 'none');
+                    window.location.replace('index.html');
                     return;
                 }
 
@@ -1658,27 +1658,26 @@
 
 
         
-        // // When live button is clicked
-        // liveButton.addEventListener('click', () => {
-        //     limitData = 1000;
-        //     durationBar.style.display = 'none';
-        
-        //     if (mode !== "Live") {
-        //         durationBar.style.display = 'none';
-        //         if (option === "MMSI"){
-        //             liveMMSI(mmsiStr);
-        //         } else if (option === "Location"){
-        //             liveLoc(latStr,lonStr);
-        //         } else{
-        //             liveAll()
-        //         }
-        //     }
-        // });
-        
+        // When live button is clicked
+        liveButton.addEventListener('click', () => {
+            limitData = 1000;
+            durationBar.style.display = 'none';
+            historyButton.classList.remove("active");
+            liveButton.classList.add("active");
 
-        // resetButton.addEventListener('click', function() {
-        //     resetMap();
-        // });
+            mode = "Live";
+            if (option === "MMSI" && mmsiStr) {
+                trackMMSI(mmsiStr);
+            } else if (option === "Location" && latStr && lonStr) {
+                liveLoc(latStr, lonStr);
+            } else {
+                liveAll();
+            }
+        });
+
+        resetButton.addEventListener('click', function() {
+            resetMap();
+        });
         
         // When search input is submitted
         searchInputForm.addEventListener('submit',async function(event) {
@@ -1686,7 +1685,7 @@
             searchInputValue = searchInput.value;
             setElementsDisplay([durationBar],'none');
             historyButton.classList.remove("active");
-            // liveButton.classList.add("active");
+            liveButton.classList.add("active");
 
             // Define regular expressions as string keys and their corresponding types
             const regexTypes = {
@@ -2773,7 +2772,9 @@
         // function used to reset map (used a lot)
         function resetMap(){
             limitData = 3000;
-            event.preventDefault();
+            if (typeof event !== 'undefined' && event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
             durationBar.style.display = 'none';
             historyButton.classList.remove("active");
             satelliteDataButton.classList.remove("active");

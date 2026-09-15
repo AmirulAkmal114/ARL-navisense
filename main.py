@@ -475,7 +475,10 @@ async def demo_request(request: Request):
     body = await request.json()
 
     smtp_server = os.environ.get("SMTP_SERVER", "smtp.hostinger.com")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    try:
+        smtp_port = int(os.environ.get("SMTP_PORT", "587") or "587")
+    except ValueError:
+        smtp_port = 587
     smtp_user = os.environ.get("SMTP_USER", "")
     smtp_password = os.environ.get("SMTP_PASSWORD", "")
     admin_emails = [e.strip() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]

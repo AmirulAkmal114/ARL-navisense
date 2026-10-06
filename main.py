@@ -145,12 +145,34 @@ async def health():
 
 @app.get("/api/_diag")
 async def _diag():
+    import socket
+    import urllib.request
+
     info = {
         "has_postgrest_url": bool(os.environ.get("POSTGREST_URL")),
         "has_postgrest_jwt": bool(os.environ.get("POSTGREST_JWT")),
         "postgrest_host": os.environ.get("POSTGREST_URL", "").split("//")[-1],
         "code": "postgrest",
     }
+
+    host = os.environ.get("POSTGREST_URL", "").split("//")[-1].split("/")[0]
+    try:
+        info["addrinfo"] = sorted({ai[4][0] for ai in socket.getaddrinfo(host, 443)})
+    except Exception as exc:  # noqa: BLE001
+        info["addrinfo_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        with urllib.request.urlopen("https://api.ipify.org", timeout=10) as resp:
+            info["urllib_generic"] = resp.status
+    except Exception as exc:  # noqa: BLE001
+        info["urllib_generic_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        import httpx
+        info["httpx_generic"] = httpx.get("https://api.ipify.org", timeout=10).status_code
+    except Exception as exc:  # noqa: BLE001
+        info["httpx_generic_err"] = f"{type(exc).__name__}: {exc}"
+
     try:
         from backend import db as _db
         info["ports"] = _db.count_ports()

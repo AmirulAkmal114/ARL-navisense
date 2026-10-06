@@ -143,6 +143,24 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/_diag")
+async def _diag():
+    info = {
+        "has_postgrest_url": bool(os.environ.get("POSTGREST_URL")),
+        "has_postgrest_jwt": bool(os.environ.get("POSTGREST_JWT")),
+        "postgrest_host": os.environ.get("POSTGREST_URL", "").split("//")[-1],
+        "code": "postgrest",
+    }
+    try:
+        from backend import db as _db
+        info["ports"] = _db.count_ports()
+        info["ok"] = True
+    except Exception as exc:  # noqa: BLE001
+        info["ok"] = False
+        info["error"] = f"{type(exc).__name__}: {exc}"
+    return info
+
+
 @app.post("/api/login")
 async def login(request: Request):
     body = await request.json()

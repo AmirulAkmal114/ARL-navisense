@@ -174,6 +174,35 @@ async def _diag():
         info["httpx_generic_err"] = f"{type(exc).__name__}: {exc}"
 
     try:
+        sock = socket.create_connection((host, 443), timeout=10)
+        sock.close()
+        info["tcp_connect"] = "ok"
+    except Exception as exc:  # noqa: BLE001
+        info["tcp_connect_err"] = f"{type(exc).__name__}: {exc}"
+
+    pg_url = os.environ.get("POSTGREST_URL", "").rstrip("/")
+    jwt = os.environ.get("POSTGREST_JWT", "")
+    req = urllib.request.Request(
+        pg_url + "/ports?limit=1", headers={"Authorization": f"Bearer {jwt}", "apikey": jwt}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            info["urllib_pg"] = resp.status
+    except Exception as exc:  # noqa: BLE001
+        info["urllib_pg_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        import httpx
+        info["httpx_pg"] = httpx.get(
+            pg_url + "/ports?limit=1",
+            headers={"Authorization": f"Bearer {jwt}", "apikey": jwt},
+            timeout=10,
+            trust_env=False,
+        ).status_code
+    except Exception as exc:  # noqa: BLE001
+        info["httpx_pg_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
         from backend import db as _db
         info["ports"] = _db.count_ports()
         info["ok"] = True

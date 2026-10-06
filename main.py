@@ -13,7 +13,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend import ais_decoder
-from backend.db import query, insert_many
+from backend.db import (
+    count_ports,
+    distinct_mmsi,
+    get_nmea_rows,
+    get_nmea_since,
+    get_user_by_email,
+    get_user_by_token,
+    insert_ais,
+    insert_nmea,
+    insert_sensor,
+    latest_ais_timestamp,
+    list_ports,
+    update_user_token,
+)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
 
@@ -92,12 +105,8 @@ def decode_item(item):
     return decoded
 
 
-def fetch_nmea_rows(where=None, params=None, limit=MAX_ROWS):
-    sql = "SELECT nmea, timestamp FROM nmea_data"
-    if where:
-        sql += " WHERE " + where
-    sql += " ORDER BY timestamp DESC NULLS LAST LIMIT %s"
-    return query(sql, (params or ()) + (limit,))
+def fetch_nmea_rows(from_time=None, to_time=None, limit=MAX_ROWS):
+    return get_nmea_rows(from_time=from_time, to_time=to_time, limit=limit)
 
 
 def decode_rows(rows, mmsi=None, lat=None, lon=None, radius_km=None):
@@ -143,7 +152,7 @@ async def login(request: Request):
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
 
-    user = query("SELECT * FROM users WHERE email = %s", (email,), fetch="one")
+    user = get_user_by_email(email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -169,11 +178,7 @@ async def login(request: Request):
         token = secrets.token_hex(32)
         time_created = now
         time_expiry = now + timedelta(days=30)
-        query(
-            "UPDATE users SET auth_token = %s, time_created = %s, time_expiry = %s WHERE email = %s",
-            (token, time_created, time_expiry, email),
-            fetch="none",
-        )
+        update_user_token(email, token, time_created, time_expiry)
 
     return {
         "message": "Login successful",
@@ -195,7 +200,7 @@ async def validate_token(request: Request, token: str = Query(None)):
     if not token:
         raise HTTPException(status_code=400, detail="Token is required")
 
-    user = query("SELECT * FROM users WHERE auth_token = %s", (token,), fetch="one")
+    user = get_user_by_token(token)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized Token")
 
@@ -268,16 +273,7 @@ async def filter_by_time(from_time: str = None, to_time: str = None):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid timestamp format")
 
-    where = []
-    params = []
-    if from_dt:
-        where.append("timestamp >= %s")
-        params.append(from_dt)
-    if to_dt:
-        where.append("timestamp <= %s")
-        params.append(to_dt)
-
-    rows = fetch_nmea_rows(where=" AND ".join(where), params=tuple(params))
+    rows = fetch_nmea_rows(from_time=from_dt, to_time=to_dt)
     decoded_messages, skipped_messages = decode_rows(rows)
 
     return {
@@ -313,16 +309,7 @@ async def get_by_mmsi_duration(mmsi: str, from_time: str = None, to_time: str = 
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid timestamp format")
 
-    where = []
-    params = []
-    if from_dt:
-        where.append("timestamp >= %s")
-        params.append(from_dt)
-    if to_dt:
-        where.append("timestamp <= %s")
-        params.append(to_dt)
-
-    rows = fetch_nmea_rows(where=" AND ".join(where), params=tuple(params))
+    rows = fetch_nmea_rows(from_time=from_dt, to_time=to_dt)
     decoded_messages, _ = decode_rows(rows, mmsi=mmsi)
     return {"Number of Messages": len(decoded_messages), "Decoded": decoded_messages}
 
@@ -335,30 +322,17 @@ async def get_by_coordinate_duration(lat: float, lon: float, from_time: str = No
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid timestamp format")
 
-    where = []
-    params = []
-    if from_dt:
-        where.append("timestamp >= %s")
-        params.append(from_dt)
-    if to_dt:
-        where.append("timestamp <= %s")
-        params.append(to_dt)
-
-    rows = fetch_nmea_rows(where=" AND ".join(where), params=tuple(params))
+    rows = fetch_nmea_rows(from_time=from_dt, to_time=to_dt)
     decoded_messages, _ = decode_rows(rows, lat=lat, lon=lon, radius_km=radius_km)
     return {"Number of Messages": len(decoded_messages), "Decoded": decoded_messages}
 
 
 @app.get("/api/port/pagination")
 async def port_pagination(page: int = Query(1, ge=1), page_size: int = Query(15, ge=1, le=100)):
-    total_row = query("SELECT COUNT(*) AS total FROM ports", fetch="one")
-    total_items = int(total_row["total"]) if total_row else 0
+    total_items = count_ports()
 
     offset = (page - 1) * page_size
-    rows = query(
-        "SELECT country, locode, port, latitude, longitude FROM ports ORDER BY country, locode LIMIT %s OFFSET %s",
-        (page_size, offset),
-    )
+    rows = list_ports(page_size, offset)
 
     data = []
     for row in rows:
@@ -406,15 +380,11 @@ async def ingest_nmea(request: Request):
 
     if messages:
         rows = [(msg, ts or utc_now()) for msg in messages]
-        count = insert_many("INSERT INTO nmea_data (nmea, timestamp) VALUES (%s, %s)", rows)
+        count = insert_nmea(rows)
         return {"status": "success", "saved": count, "table": "nmea_data"}
 
     if voltage is not None or temperature is not None:
-        query(
-            "INSERT INTO sensor_data (device_id, voltage, temperature, nmea, timestamp) VALUES (%s, %s, %s, %s, %s)",
-            (device_id, voltage, temperature, None, ts or utc_now()),
-            fetch="none",
-        )
+        insert_sensor(device_id, voltage, temperature, ts or utc_now())
         return {"status": "success", "saved": 1, "table": "sensor_data"}
 
     raise HTTPException(status_code=400, detail="No NMEA messages or sensor values provided")
@@ -422,24 +392,16 @@ async def ingest_nmea(request: Request):
 
 @app.post("/api/insert_ais_data")
 async def insert_ais_data(limit: int = Query(1000, ge=1, le=5000)):
-    latest_row = query(
-        "SELECT COALESCE(MAX(time_stamp), 'epoch'::timestamptz) AS latest FROM ais_data_sat",
-        fetch="one",
-    )
-    since = latest_row["latest"] if latest_row else None
+    since = latest_ais_timestamp() or datetime(1970, 1, 1, tzinfo=timezone.utc)
 
-    rows = query(
-        "SELECT nmea, timestamp FROM nmea_data WHERE timestamp > %s ORDER BY timestamp ASC LIMIT %s",
-        (since, limit),
-    )
+    rows = get_nmea_since(since, limit)
 
     if not rows:
-        result = query("SELECT DISTINCT mmsi FROM ais_data_sat WHERE mmsi IS NOT NULL")
         return {
             "message": "No new AIS data to archive",
             "inserted": 0,
             "inserted_mmsi": [],
-            "all_mmsi_in_table": [row["mmsi"] for row in result],
+            "all_mmsi_in_table": distinct_mmsi(),
         }
 
     archive_rows = []
@@ -462,17 +424,13 @@ async def insert_ais_data(limit: int = Query(1000, ge=1, le=5000)):
         if mmsi and mmsi not in inserted_mmsi:
             inserted_mmsi.append(mmsi)
 
-    inserted = insert_many(
-        "INSERT INTO ais_data_sat (time_stamp, ch1, ch2, rssi, data_column, mmsi) VALUES (%s, %s, %s, %s, %s, %s)",
-        archive_rows,
-    )
+    inserted = insert_ais(archive_rows)
 
-    result = query("SELECT DISTINCT mmsi FROM ais_data_sat WHERE mmsi IS NOT NULL")
     return {
         "message": "AIS data inserted successfully",
         "inserted": inserted,
         "inserted_mmsi": inserted_mmsi,
-        "all_mmsi_in_table": [row["mmsi"] for row in result],
+        "all_mmsi_in_table": distinct_mmsi(),
     }
 
 

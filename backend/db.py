@@ -9,12 +9,24 @@ Environment:
 """
 
 import os
+import socket
 from datetime import datetime, timezone
 
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Vercel's serverless network is IPv4-only: connecting over IPv6 fails
+# (EADDRNOTAVAIL / EBUSY). Force IPv4 DNS resolution so httpx never tries IPv6.
+_getaddrinfo = socket.getaddrinfo
+
+
+def _getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+    return _getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+
+socket.getaddrinfo = _getaddrinfo_ipv4
 
 BASE = os.environ.get("POSTGREST_URL", "").rstrip("/")
 JWT = os.environ.get("POSTGREST_JWT", "")

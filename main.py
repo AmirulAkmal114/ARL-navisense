@@ -157,6 +157,11 @@ async def _diag():
             out[name] = f"ok {addr}"
         except Exception as exc:  # noqa: BLE001
             out[name] = f"{type(exc).__name__}: {exc}"
+    try:
+        from backend import db as _db
+        out["ports"] = _db.count_ports()
+    except Exception as exc:  # noqa: BLE001
+        out["ports_err"] = f"{type(exc).__name__}: {exc}"
     return out
 
 

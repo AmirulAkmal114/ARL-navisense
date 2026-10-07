@@ -17,12 +17,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Be tolerant of a malformed value (e.g. a pasted markdown link): keep only the
-# first valid http(s) URL and drop any trailing junk.
+# Be tolerant of malformed values (e.g. pasted markdown links): keep only the
+# first valid http(s) URL / JWT and drop any trailing junk.
 _raw_base = os.environ.get("POSTGREST_URL", "")
 _match = re.match(r"https?://[^\s\]\)]+", _raw_base)
 BASE = (_match.group(0) if _match else _raw_base).rstrip("/")
-JWT = os.environ.get("POSTGREST_JWT", "")
+
+_raw_jwt = os.environ.get("POSTGREST_JWT", "")
+_jwt_match = re.search(r"eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+", _raw_jwt)
+JWT = _jwt_match.group(0) if _jwt_match else _raw_jwt.strip()
 
 _TIMESTAMP_FIELDS = {"timestamp", "time_stamp", "time_created", "time_expiry"}
 

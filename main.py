@@ -147,16 +147,18 @@ async def health():
 async def _diag():
     import socket
 
-    out = {}
-    for host in (
-        "api.ipify.org",
-        "google.com",
-        "fusion-dice-investigated-validity.trycloudflare.com",
-    ):
-        try:
-            out[host] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)][:4]
-        except Exception as exc:  # noqa: BLE001
-            out[host] = f"{type(exc).__name__}: {exc}"
+    from backend import db
+
+    host = db.BASE.split("//")[-1].split("/")[0]
+    out = {"base": db.BASE, "host": host}
+    try:
+        out["addrinfo"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)][:4]
+    except Exception as exc:  # noqa: BLE001
+        out["addrinfo_err"] = f"{type(exc).__name__}: {exc}"
+    try:
+        out["ports"] = db.count_ports()
+    except Exception as exc:  # noqa: BLE001
+        out["ports_err"] = f"{type(exc).__name__}: {exc}"
     return out
 
 

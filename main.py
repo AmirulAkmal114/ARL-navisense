@@ -145,28 +145,22 @@ async def health():
 
 @app.get("/api/_diag")
 async def _diag():
-    import urllib.request
+    import http.client
 
     pg = os.environ.get("POSTGREST_URL", "").rstrip("/")
     jwt = os.environ.get("POSTGREST_JWT", "")
     hdrs = {"Authorization": f"Bearer {jwt}", "apikey": jwt}
-    out = {}
+    host = pg.split("//")[-1].split("/")[0]
+    out = {"pg": pg, "host": host}
 
     try:
-        req = urllib.request.Request(pg + "/ports?limit=1", headers=hdrs)
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            out["urllib"] = resp.status
+        conn = http.client.HTTPSConnection(host, 443, timeout=5)
+        conn.request("GET", "/ports?limit=1", headers=hdrs)
+        resp = conn.getresponse()
+        out["httpclient"] = resp.status
+        conn.close()
     except Exception as exc:  # noqa: BLE001
-        out["urllib_err"] = f"{type(exc).__name__}: {exc}"
-
-    try:
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")
-        with httpx.Client(transport=transport, timeout=4) as client:
-            out["httpx_localaddr"] = client.get(pg + "/ports?limit=1", headers=hdrs).status_code
-    except Exception as exc:  # noqa: BLE001
-        out["httpx_localaddr_err"] = f"{type(exc).__name__}: {exc}"
+        out["httpclient_err"] = f"{type(exc).__name__}: {exc}"
 
     return out
 

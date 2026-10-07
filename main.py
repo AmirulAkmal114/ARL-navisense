@@ -150,7 +150,14 @@ async def _diag():
     from backend import db
 
     host = db.BASE.split("//")[-1].split("/")[0]
-    out = {"base": db.BASE, "host": host, "jwt_len": len(db.JWT), "jwt_dots": db.JWT.count(".")}
+    out = {
+        "base": db.BASE,
+        "host": host,
+        "jwt_len": len(db.JWT),
+        "jwt_dots": db.JWT.count("."),
+        "jwt_head": db.JWT[:30],
+        "jwt_tail": db.JWT[-30:],
+    }
     try:
         out["addrinfo"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)][:4]
     except Exception as exc:  # noqa: BLE001

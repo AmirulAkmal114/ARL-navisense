@@ -147,36 +147,16 @@ async def health():
 async def _diag():
     import socket
 
-    from backend import db
-
-    host = db.BASE.split("//")[-1].split("/")[0]
-    out = {"host": host}
-
-    try:
-        out["addrinfo"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)]
-    except Exception as exc:  # noqa: BLE001
-        out["addrinfo_err"] = f"{type(exc).__name__}: {exc}"
-
-    try:
-        out["addrinfo_v4"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443, socket.AF_INET)]
-    except Exception as exc:  # noqa: BLE001
-        out["addrinfo_v4_err"] = f"{type(exc).__name__}: {exc}"
-
-    try:
-        sock = socket.create_connection((host, 443), timeout=5)
-        sock.close()
-        out["connect_hostname"] = "ok"
-    except Exception as exc:  # noqa: BLE001
-        out["connect_hostname_err"] = f"{type(exc).__name__}: {exc}"
-
-    try:
-        ip4 = socket.getaddrinfo(host, 443, socket.AF_INET)[0][4][0]
-        sock = socket.create_connection((ip4, 443), timeout=5)
-        sock.close()
-        out["connect_ipv4"] = f"ok {ip4}"
-    except Exception as exc:  # noqa: BLE001
-        out["connect_ipv4_err"] = f"{type(exc).__name__}: {exc}"
-
+    out = {}
+    for host in (
+        "api.ipify.org",
+        "google.com",
+        "fusion-dice-investigated-validity.trycloudflare.com",
+    ):
+        try:
+            out[host] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)][:4]
+        except Exception as exc:  # noqa: BLE001
+            out[host] = f"{type(exc).__name__}: {exc}"
     return out
 
 

@@ -145,23 +145,29 @@ async def health():
 
 @app.get("/api/_diag")
 async def _diag():
-    import socket
+    import urllib.request
 
-    host = os.environ.get("POSTGREST_URL", "").split("//")[-1].split("/")[0]
-    out = {"host": host}
-    for fam, name in ((socket.AF_INET, "ipv4"), (socket.AF_INET6, "ipv6")):
-        try:
-            addr = socket.getaddrinfo(host, 443, fam)[0][4][0]
-            sock = socket.create_connection((addr, 443), timeout=3)
-            sock.close()
-            out[name] = f"ok {addr}"
-        except Exception as exc:  # noqa: BLE001
-            out[name] = f"{type(exc).__name__}: {exc}"
+    pg = os.environ.get("POSTGREST_URL", "").rstrip("/")
+    jwt = os.environ.get("POSTGREST_JWT", "")
+    hdrs = {"Authorization": f"Bearer {jwt}", "apikey": jwt}
+    out = {}
+
     try:
-        from backend import db as _db
-        out["ports"] = _db.count_ports()
+        req = urllib.request.Request(pg + "/ports?limit=1", headers=hdrs)
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            out["urllib"] = resp.status
     except Exception as exc:  # noqa: BLE001
-        out["ports_err"] = f"{type(exc).__name__}: {exc}"
+        out["urllib_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        import httpx
+
+        transport = httpx.HTTPTransport(local_address="0.0.0.0")
+        with httpx.Client(transport=transport, timeout=4) as client:
+            out["httpx_localaddr"] = client.get(pg + "/ports?limit=1", headers=hdrs).status_code
+    except Exception as exc:  # noqa: BLE001
+        out["httpx_localaddr_err"] = f"{type(exc).__name__}: {exc}"
+
     return out
 
 

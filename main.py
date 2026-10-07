@@ -143,31 +143,6 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/api/_diag")
-async def _diag():
-    import socket
-
-    from backend import db
-
-    host = db.BASE.split("//")[-1].split("/")[0]
-    out = {
-        "base": db.BASE,
-        "host": host,
-        "jwt_len": len(db.JWT),
-        "jwt_seg_lens": [len(s) for s in db.JWT.split(".")],
-        "jwt": db.JWT,
-    }
-    try:
-        out["addrinfo"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)][:4]
-    except Exception as exc:  # noqa: BLE001
-        out["addrinfo_err"] = f"{type(exc).__name__}: {exc}"
-    try:
-        out["ports"] = db.count_ports()
-    except Exception as exc:  # noqa: BLE001
-        out["ports_err"] = f"{type(exc).__name__}: {exc}"
-    return out
-
-
 @app.post("/api/login")
 async def login(request: Request):
     body = await request.json()

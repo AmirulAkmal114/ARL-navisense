@@ -9,6 +9,7 @@ Environment:
 """
 
 import os
+import re
 from datetime import datetime, timezone
 
 import httpx
@@ -16,7 +17,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE = os.environ.get("POSTGREST_URL", "").rstrip("/")
+# Be tolerant of a malformed value (e.g. a pasted markdown link): keep only the
+# first valid http(s) URL and drop any trailing junk.
+_raw_base = os.environ.get("POSTGREST_URL", "")
+_match = re.match(r"https?://[^\s\]\)]+", _raw_base)
+BASE = (_match.group(0) if _match else _raw_base).rstrip("/")
 JWT = os.environ.get("POSTGREST_JWT", "")
 
 _TIMESTAMP_FIELDS = {"timestamp", "time_stamp", "time_created", "time_expiry"}

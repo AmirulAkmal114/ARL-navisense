@@ -145,13 +145,38 @@ async def health():
 
 @app.get("/api/_diag")
 async def _diag():
+    import socket
+
     from backend import db
 
-    out = {"base": db.BASE, "jwt_len": len(db.JWT), "jwt_dots": db.JWT.count(".")}
+    host = db.BASE.split("//")[-1].split("/")[0]
+    out = {"host": host}
+
     try:
-        out["ports"] = db.count_ports()
+        out["addrinfo"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443)]
     except Exception as exc:  # noqa: BLE001
-        out["ports_err"] = f"{type(exc).__name__}: {exc}"
+        out["addrinfo_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        out["addrinfo_v4"] = [ai[4][0] for ai in socket.getaddrinfo(host, 443, socket.AF_INET)]
+    except Exception as exc:  # noqa: BLE001
+        out["addrinfo_v4_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        sock = socket.create_connection((host, 443), timeout=5)
+        sock.close()
+        out["connect_hostname"] = "ok"
+    except Exception as exc:  # noqa: BLE001
+        out["connect_hostname_err"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        ip4 = socket.getaddrinfo(host, 443, socket.AF_INET)[0][4][0]
+        sock = socket.create_connection((ip4, 443), timeout=5)
+        sock.close()
+        out["connect_ipv4"] = f"ok {ip4}"
+    except Exception as exc:  # noqa: BLE001
+        out["connect_ipv4_err"] = f"{type(exc).__name__}: {exc}"
+
     return out
 
 

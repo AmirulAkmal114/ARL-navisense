@@ -145,23 +145,13 @@ async def health():
 
 @app.get("/api/_diag")
 async def _diag():
-    import http.client
+    from backend import db
 
-    pg = os.environ.get("POSTGREST_URL", "").rstrip("/")
-    jwt = os.environ.get("POSTGREST_JWT", "")
-    hdrs = {"Authorization": f"Bearer {jwt}", "apikey": jwt}
-    host = pg.split("//")[-1].split("/")[0]
-    out = {"pg": pg, "host": host}
-
+    out = {"base": db.BASE, "jwt_len": len(db.JWT), "jwt_dots": db.JWT.count(".")}
     try:
-        conn = http.client.HTTPSConnection(host, 443, timeout=5)
-        conn.request("GET", "/ports?limit=1", headers=hdrs)
-        resp = conn.getresponse()
-        out["httpclient"] = resp.status
-        conn.close()
+        out["ports"] = db.count_ports()
     except Exception as exc:  # noqa: BLE001
-        out["httpclient_err"] = f"{type(exc).__name__}: {exc}"
-
+        out["ports_err"] = f"{type(exc).__name__}: {exc}"
     return out
 
 

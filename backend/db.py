@@ -12,7 +12,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-import httpx
+import http
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,7 +44,7 @@ def _headers(extra=None):
 
 
 def _client():
-    return httpx.Client(base_url=BASE, headers=_headers(), timeout=30)
+    return http.Client(base_url=BASE, headers=_headers(), timeout=30)
 
 
 def _iso(value):

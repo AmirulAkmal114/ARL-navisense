@@ -9,6 +9,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+data/
+
 # Legacy AWS Lambda code (superseded by the Vercel + Supabase migration)
 lambda_function.py
 LoginFunction-*/

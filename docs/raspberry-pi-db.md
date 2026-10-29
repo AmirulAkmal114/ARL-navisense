@@ -1,10 +1,11 @@
-# Raspberry Pi Database Mirror (NaviSense)
+# Raspberry Pi Database + PostgREST (NaviSense)
 
-The NaviSense app keeps Supabase as its primary cloud database. When
-`PI_DATABASE_URL` is set, every write is also mirrored to a PostgreSQL
-database running on the Raspberry Pi, reached through a Cloudflare Tunnel.
-If the Pi is unreachable, mirror errors are logged and ignored — the cloud app
-never breaks because of the Pi.
+NaviSense stores its data in PostgreSQL on the Raspberry Pi. The FastAPI app on
+Vercel talks to it through PostgREST over HTTPS; it does not open a Postgres
+connection directly.
+
+Supabase is the legacy source. `scripts/pi_backfill.py` copies existing rows
+into the Pi database, but the running app no longer reads from Supabase.
 
 ## 1. Install PostgreSQL on the Pi
 
@@ -14,8 +15,8 @@ sudo apt install -y postgresql
 sudo systemctl enable --now postgresql
 ```
 
-PostgreSQL listens on `localhost:5432` only — exactly what we want, since the
-tunnel connects locally.
+PostgreSQL listens on `localhost:5432` only — exactly what we want, since
+PostgREST and the tunnel connect locally.
 
 ## 2. Create the NaviSense database
 
@@ -27,8 +28,26 @@ ssh pi@<pi-host> "sudo -u postgres psql -f /tmp/setup_pi_db.sql"
 ```
 
 Edit the file first and change `CHANGE-ME-strong-password` to a real password.
+The script creates the `navisense` database, all application tables, and the
+`arl_app` role used by the PostgREST JWT.
 
-## 3. Expose Postgres with a Cloudflare Tunnel
+## 3. Run PostgREST
+
+PostgREST exposes the database as a REST API on port 3000. A Docker setup is
+the simplest option:
+
+```bash
+docker run -d --name postgrest --restart unless-stopped --network host \
+  -e PGRST_DB_URI="postgres://navisense:<password>@127.0.0.1:5432/navisense" \
+  -e PGRST_DB_SCHEMAS=public \
+  -e PGRST_JWT_SECRET="<jwt-secret>" \
+  postgrest/postgrest
+```
+
+The JWT in `POSTGREST_JWT` must be signed with the same `<jwt-secret>` and
+contain `"role": "arl_app"`.
+
+## 4. Expose PostgREST with a Cloudflare Tunnel
 
 On the Pi:
 
@@ -49,15 +68,15 @@ tunnel: <TUNNEL_ID from "cloudflared tunnel list">
 credentials-file: /home/pi/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  - hostname: pi-db.yourdomain.com
-    service: tcp://localhost:5432
+  - hostname: db.arl-navisense.com
+    service: http://localhost:3000
   - service: http_status:404
 ```
 
 Then route the hostname and run it as a service:
 
 ```bash
-cloudflared tunnel route dns navisense-pi-db pi-db.yourdomain.com
+cloudflared tunnel route dns navisense-pi-db db.arl-navisense.com
 sudo cloudflared service install
 sudo systemctl enable --now cloudflared
 ```
@@ -65,36 +84,53 @@ sudo systemctl enable --now cloudflared
 ### Quick test without a domain
 
 ```bash
-cloudflared tunnel --url tcp://localhost:5432
+cloudflared tunnel --url http://localhost:3000
 ```
 
-This prints a random `*.trycloudflare.com` URL you can use in step 4 to test,
+This prints a random `*.trycloudflare.com` URL you can use in step 5 to test,
 but it changes on every restart — use a real hostname for production.
 
-## 4. Configure the app
+## 5. Configure the app
 
-Add to `.env` (local) and to the Vercel environment variables:
+Add these to `.env` locally and to the Vercel environment variables
+(Production and Preview):
 
 ```
-PI_DATABASE_URL=postgresql://navisense:<password>@pi-db.yourdomain.com:5432/navisense
+POSTGREST_URL=https://db.arl-navisense.com
+POSTGREST_JWT=<JWT signed with PGRST_JWT_SECRET, role=arl_app>
 ```
 
-From now on every `INSERT`/`UPDATE` the app performs is mirrored to the Pi.
+Restart the app after changing them. The app will return 500 on database
+routes if either variable is missing or the JWT is rejected by PostgREST.
 
-## 5. Backfill existing data
+## 6. Backfill existing Supabase data
 
-One-time (or repeatable) copy of existing Supabase rows to the Pi:
+`PI_DATABASE_URL` is only needed by the backfill script; the app itself uses
+PostgREST. Add both connection strings to `.env`:
+
+```
+SUPABASE_DATABASE_URL=postgresql://...
+PI_DATABASE_URL=postgresql://navisense:<password>@<pi-host>:5432/navisense
+```
+
+Then run:
 
 ```bash
 python scripts/pi_backfill.py          # incremental: only rows newer than the Pi's watermark
 python scripts/pi_backfill.py --full   # everything (conflicts are skipped)
 ```
 
-## 6. Verify
+## 7. Verify
+
+From your dev machine:
 
 ```bash
-# On the Pi
-sudo -u postgres psql -d navisense -c "select count(*) from nmea_data;"
+curl https://<vercel-app>/api/health
+curl "https://<vercel-app>/api/port/pagination?page=1&page_size=1"
 ```
 
-Or from your dev machine with `psql` pointed at `PI_DATABASE_URL`.
+On the Pi:
+
+```bash
+sudo -u postgres psql -d navisense -c "select count(*) from nmea_data;"
+```

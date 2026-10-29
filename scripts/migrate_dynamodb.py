@@ -1,3 +1,8 @@
+"""Legacy DynamoDB -> Supabase migration, kept as a reference.
+
+Requires: pip install boto3 psycopg2-binary
+"""
+
 import os
 import secrets
 import sys

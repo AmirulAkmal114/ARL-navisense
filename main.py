@@ -47,19 +47,21 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
-def to_utc_naive(dt):
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
-
-
 def parse_dt(value):
     dt = isoparse(value)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+async def read_json(request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    return body
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -96,9 +98,11 @@ def decode_item(item):
     ts = item.get("timestamp")
     if ts:
         try:
-            dt = to_utc_naive(ts)
+            dt = parse_dt(ts) if isinstance(ts, str) else ts
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
             decoded["unix_timestamp"] = int(dt.timestamp())
-            decoded["datetime"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+            decoded["datetime"] = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             pass
 
@@ -145,7 +149,7 @@ async def health():
 
 @app.post("/api/login")
 async def login(request: Request):
-    body = await request.json()
+    body = await read_json(request)
     email = body.get("email")
     password = body.get("password")
 
@@ -354,7 +358,7 @@ async def ingest_nmea(request: Request):
     if not expected_key or api_key != expected_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
-    body = await request.json()
+    body = await read_json(request)
 
     ts = None
     if body.get("timestamp"):
@@ -436,7 +440,7 @@ async def insert_ais_data(limit: int = Query(1000, ge=1, le=5000)):
 
 @app.post("/api/demo-request")
 async def demo_request(request: Request):
-    body = await request.json()
+    body = await read_json(request)
 
     smtp_server = os.environ.get("SMTP_SERVER", "smtp.hostinger.com")
     try:

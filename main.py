@@ -8,7 +8,7 @@ from math import radians, sin, cos, asin, sqrt
 
 import bcrypt
 from dateutil.parser import isoparse
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -62,6 +62,35 @@ async def read_json(request):
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="JSON object required")
     return body
+
+
+def require_user(request: Request):
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    else:
+        token = request.query_params.get("token", "").strip()
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized Token")
+
+    user = get_user_by_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized Token")
+
+    expiry = user.get("time_expiry")
+    if isinstance(expiry, str):
+        try:
+            expiry = parse_dt(expiry)
+        except ValueError:
+            expiry = None
+    if expiry:
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if expiry < utc_now():
+            raise HTTPException(status_code=401, detail="Unauthorized Token")
+
+    return user
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -219,7 +248,7 @@ async def validate_token(request: Request, token: str = Query(None)):
 
 
 @app.get("/api/decode")
-async def get_raw_nmea():
+async def get_raw_nmea(user=Depends(require_user)):
     rows = fetch_nmea_rows()
     nmea_list = [item["nmea"] for item in rows]
     return {
@@ -229,7 +258,7 @@ async def get_raw_nmea():
 
 
 @app.get("/api/all")
-async def get_decoded_all():
+async def get_decoded_all(user=Depends(require_user)):
     rows = fetch_nmea_rows()
     decoded_messages, skipped_messages = decode_rows(rows)
     return {
@@ -240,7 +269,7 @@ async def get_decoded_all():
 
 
 @app.get("/api/class")
-async def get_by_class(vessel_class: str = Query(...)):
+async def get_by_class(vessel_class: str = Query(...), user=Depends(require_user)):
     vclass = vessel_class.upper()
     if vclass not in ("A", "B"):
         raise HTTPException(status_code=422, detail="vessel_class must be A or B")
@@ -270,7 +299,7 @@ async def get_by_class(vessel_class: str = Query(...)):
 
 
 @app.get("/api/time")
-async def filter_by_time(from_time: str = None, to_time: str = None):
+async def filter_by_time(from_time: str = None, to_time: str = None, user=Depends(require_user)):
     try:
         from_dt = parse_dt(from_time) if from_time else None
         to_dt = parse_dt(to_time) if to_time else None
@@ -290,7 +319,7 @@ async def filter_by_time(from_time: str = None, to_time: str = None):
 
 
 @app.get("/api/mmsi")
-async def get_by_mmsi(mmsi: str):
+async def get_by_mmsi(mmsi: str, user=Depends(require_user)):
     rows = fetch_nmea_rows()
     decoded_messages, _ = decode_rows(rows, mmsi=mmsi)
     if not decoded_messages:
@@ -299,14 +328,14 @@ async def get_by_mmsi(mmsi: str):
 
 
 @app.get("/api/coordinate")
-async def get_by_coordinate(lat: float, lon: float, radius_km: float = 100):
+async def get_by_coordinate(lat: float, lon: float, radius_km: float = 100, user=Depends(require_user)):
     rows = fetch_nmea_rows(limit=3000)
     decoded_messages, _ = decode_rows(rows, lat=lat, lon=lon, radius_km=radius_km)
     return {"Number of Messages": len(decoded_messages), "Decoded": decoded_messages}
 
 
 @app.get("/api/get-by-mmsi/duration")
-async def get_by_mmsi_duration(mmsi: str, from_time: str = None, to_time: str = None):
+async def get_by_mmsi_duration(mmsi: str, from_time: str = None, to_time: str = None, user=Depends(require_user)):
     try:
         from_dt = parse_dt(from_time) if from_time else None
         to_dt = parse_dt(to_time) if to_time else None
@@ -319,7 +348,7 @@ async def get_by_mmsi_duration(mmsi: str, from_time: str = None, to_time: str = 
 
 
 @app.get("/api/get-by-coordinate/duration")
-async def get_by_coordinate_duration(lat: float, lon: float, from_time: str = None, to_time: str = None, radius_km: float = 100):
+async def get_by_coordinate_duration(lat: float, lon: float, from_time: str = None, to_time: str = None, radius_km: float = 100, user=Depends(require_user)):
     try:
         from_dt = parse_dt(from_time) if from_time else None
         to_dt = parse_dt(to_time) if to_time else None
